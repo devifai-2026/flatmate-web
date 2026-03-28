@@ -229,11 +229,18 @@ export default function Search() {
   const getRoomParams = () => ({
     location: filters.location || undefined, minRent: filters.minBudget || undefined, maxRent: filters.maxBudget || undefined,
     preferredTenant: filters.preferredTenant || undefined,
+    roomType: filters.roomType || undefined,
+    furnishing: filters.furnishing || undefined,
+    parking: filters.parking || undefined,
   });
 
   const getRoommateParams = () => ({
     location: filters.location || undefined, minBudget: filters.minBudget || undefined, maxBudget: filters.maxBudget || undefined,
     gender: filters.gender || undefined, sleepSchedule: filters.sleepSchedule || undefined,
+    foodPreference: filters.foodPreference || undefined,
+    religion: filters.religion || undefined,
+    occupation: filters.occupation || undefined,
+    roomType: filters.roomType || undefined,
     smoking: filters.smoking ? 'false' : undefined,
     drinking: filters.drinking ? 'false' : undefined,
     pets: filters.pets ? 'true' : undefined,
@@ -244,6 +251,7 @@ export default function Search() {
     minRent: filters.minBudget || undefined, maxRent: filters.maxBudget || undefined,
     gender: filters.pgGender || undefined, sharing: filters.sharing || undefined,
     meals: filters.meals ? 'true' : undefined,
+    mealType: filters.mealType || undefined,
   });
 
   // Serialized filter key for effect dependency

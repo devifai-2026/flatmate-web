@@ -17,10 +17,20 @@ function Section({ title, children, defaultOpen = true }) {
   );
 }
 
-/**
- * Compact filter sidebar — dynamic per tab.
- * @param {string} tab - 'all' | 'rooms' | 'roommates' | 'pgs'
- */
+function Select({ value, onChange, options, placeholder = 'Any' }) {
+  return (
+    <select value={value || ''} onChange={(e) => onChange(e.target.value)}
+      className="w-full px-3 py-2 rounded-xl border border-dark/8 bg-white text-sm outline-none focus:border-primary/40">
+      <option value="">{placeholder}</option>
+      {options.map((o) => (
+        <option key={typeof o === 'string' ? o : o.value} value={typeof o === 'string' ? o : o.value}>
+          {typeof o === 'string' ? o.charAt(0).toUpperCase() + o.slice(1).replace(/-/g, ' ') : o.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function Sidebar({ filters, onFilterChange, tab = 'all' }) {
   const update = (key, value) => onFilterChange({ ...filters, [key]: value });
 
@@ -46,44 +56,113 @@ export default function Sidebar({ filters, onFilterChange, tab = 'all' }) {
       </Section>
 
       {/* ── ROOMS ── */}
-      {(tab === 'rooms') && (
-        <Section title="Preferred Tenant">
-          <select value={filters.preferredTenant || ''} onChange={(e) => update('preferredTenant', e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-dark/8 bg-white text-sm outline-none focus:border-primary/40">
-            <option value="">Any</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="family">Family</option>
-            <option value="students">Students</option>
-            <option value="working-professionals">Working Professionals</option>
-          </select>
-        </Section>
+      {tab === 'rooms' && (
+        <>
+          <Section title="Room Type">
+            <div className="flex flex-wrap gap-1.5">
+              {[{ id: '', label: 'Any' }, { id: '1rk', label: '1RK' }, { id: '1bhk', label: '1BHK' }, { id: '2bhk', label: '2BHK' }, { id: '3bhk', label: '3BHK' }, { id: '4bhk+', label: '4BHK+' }, { id: 'single-room', label: 'Single' }, { id: 'shared-room', label: 'Shared' }].map((t) => (
+                <button key={t.id} onClick={() => update('roomType', t.id)}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-semibold cursor-pointer transition-all ${filters.roomType === t.id || (!filters.roomType && t.id === '') ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="Furnishing">
+            <div className="flex gap-1.5">
+              {[{ id: '', label: 'Any' }, { id: 'fully-furnished', label: 'Furnished' }, { id: 'semi-furnished', label: 'Semi' }, { id: 'unfurnished', label: 'Unfurnished' }].map((f) => (
+                <button key={f.id} onClick={() => update('furnishing', f.id)}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold cursor-pointer transition-all ${filters.furnishing === f.id || (!filters.furnishing && f.id === '') ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="Preferred Tenant">
+            <Select value={filters.preferredTenant} onChange={(v) => update('preferredTenant', v)}
+              options={[
+                { value: 'male', label: 'Male' }, { value: 'female', label: 'Female' },
+                { value: 'family', label: 'Family' }, { value: 'students', label: 'Students' },
+                { value: 'working-professionals', label: 'Working Professionals' },
+              ]} />
+          </Section>
+
+          <Section title="Parking" defaultOpen={false}>
+            <div className="flex gap-1.5">
+              {[{ id: '', label: 'Any' }, { id: 'bike', label: '🏍️ Bike' }, { id: 'car', label: '🚗 Car' }, { id: 'both', label: 'Both' }].map((p) => (
+                <button key={p.id} onClick={() => update('parking', p.id)}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold cursor-pointer transition-all ${filters.parking === p.id || (!filters.parking && p.id === '') ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+        </>
       )}
 
       {/* ── ROOMMATES ── */}
-      {(tab === 'roommates') && (
+      {tab === 'roommates' && (
         <>
-          <Section title="Roommate Preference">
-            <select value={filters.gender || ''} onChange={(e) => update('gender', e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-dark/8 bg-white text-sm outline-none focus:border-primary/40">
-              <option value="">Any Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-            <select value={filters.sleepSchedule || ''} onChange={(e) => update('sleepSchedule', e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-dark/8 bg-white text-sm outline-none focus:border-primary/40">
-              <option value="">Any Schedule</option>
-              <option value="early-bird">Early Bird</option>
-              <option value="night-owl">Night Owl</option>
-              <option value="flexible">Flexible</option>
-            </select>
+          <Section title="Gender">
+            <Select value={filters.gender} onChange={(v) => update('gender', v)}
+              options={['male', 'female', 'non-binary']} placeholder="Any Gender" />
+          </Section>
+
+          <Section title="Food Preference">
+            <div className="flex flex-wrap gap-1.5">
+              {[{ id: '', label: 'Any' }, { id: 'veg', label: '🟢 Veg' }, { id: 'non-veg', label: '🔴 Non-Veg' }, { id: 'eggetarian', label: '🟡 Egg' }, { id: 'vegan', label: '🌿 Vegan' }].map((f) => (
+                <button key={f.id} onClick={() => update('foodPreference', f.id)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${filters.foodPreference === f.id || (!filters.foodPreference && f.id === '') ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="Religion" defaultOpen={false}>
+            <Select value={filters.religion} onChange={(v) => update('religion', v)}
+              options={[
+                { value: 'hindu', label: 'Hindu' }, { value: 'muslim', label: 'Muslim' },
+                { value: 'christian', label: 'Christian' }, { value: 'sikh', label: 'Sikh' },
+                { value: 'jain', label: 'Jain' }, { value: 'buddhist', label: 'Buddhist' },
+                { value: 'no-preference', label: 'No Preference' },
+              ]} placeholder="Any Religion" />
+          </Section>
+
+          <Section title="Occupation" defaultOpen={false}>
+            <Select value={filters.occupation} onChange={(v) => update('occupation', v)}
+              options={[
+                { value: 'student', label: 'Student' }, { value: 'working-professional', label: 'Working Professional' },
+                { value: 'freelancer', label: 'Freelancer' }, { value: 'business', label: 'Business' },
+              ]} placeholder="Any Occupation" />
+          </Section>
+
+          <Section title="Room Type" defaultOpen={false}>
+            <div className="flex gap-2">
+              {[{ id: '', label: 'Any' }, { id: 'single', label: 'Single' }, { id: 'shared', label: 'Shared' }].map((r) => (
+                <button key={r.id} onClick={() => update('roomType', r.id)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${filters.roomType === r.id || (!filters.roomType && r.id === '') ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="Schedule">
+            <Select value={filters.sleepSchedule} onChange={(v) => update('sleepSchedule', v)}
+              options={[
+                { value: 'early-bird', label: '🌅 Early Bird' }, { value: 'night-owl', label: '🦉 Night Owl' },
+                { value: 'flexible', label: '🔄 Flexible' },
+              ]} placeholder="Any Schedule" />
           </Section>
 
           <Section title="Lifestyle" defaultOpen={false}>
             <div className="space-y-1.5">
               {[
-                { key: 'smoking', label: 'Non-smoking' },
-                { key: 'drinking', label: 'Non-drinking' },
+                { key: 'smoking', label: 'Non-smoking only' },
+                { key: 'drinking', label: 'Non-drinking only' },
                 { key: 'pets', label: 'Pet-friendly' },
               ].map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer">
@@ -114,41 +193,46 @@ export default function Sidebar({ filters, onFilterChange, tab = 'all' }) {
       )}
 
       {/* ── PG ── */}
-      {(tab === 'pgs') && (
-        <Section title="PG Preferences">
-          <select value={filters.pgGender || ''} onChange={(e) => update('pgGender', e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-dark/8 bg-white text-sm outline-none focus:border-primary/40">
-            <option value="">Any Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="unisex">Unisex</option>
-          </select>
-          <select value={filters.sharing || ''} onChange={(e) => update('sharing', e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-dark/8 bg-white text-sm outline-none focus:border-primary/40">
-            <option value="">Any Sharing</option>
-            <option value="single">Single</option>
-            <option value="double">Double</option>
-            <option value="triple">Triple</option>
-          </select>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={filters.meals || false} onChange={(e) => update('meals', e.target.checked)}
-              className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary" />
-            <span className="text-xs text-muted">Meals included</span>
-          </label>
-        </Section>
+      {tab === 'pgs' && (
+        <>
+          <Section title="Gender">
+            <Select value={filters.pgGender} onChange={(v) => update('pgGender', v)}
+              options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'unisex', label: 'Unisex' }]}
+              placeholder="Any Gender" />
+          </Section>
+
+          <Section title="Sharing">
+            <div className="flex gap-2">
+              {[{ id: '', label: 'Any' }, { id: 'single', label: 'Single' }, { id: 'double', label: 'Double' }, { id: 'triple', label: 'Triple' }].map((s) => (
+                <button key={s.id} onClick={() => update('sharing', s.id)}
+                  className={`flex-1 py-2 rounded-xl text-[10px] font-semibold cursor-pointer transition-all ${filters.sharing === s.id || (!filters.sharing && s.id === '') ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="Meals">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={filters.meals || false} onChange={(e) => update('meals', e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary" />
+              <span className="text-xs text-muted">Meals included only</span>
+            </label>
+            {filters.meals && (
+              <div className="flex gap-1.5 mt-1">
+                {[{ id: '', label: 'Any' }, { id: 'veg', label: '🟢 Veg' }, { id: 'non-veg', label: '🔴 Non-Veg' }, { id: 'both', label: '🟡 Both' }].map((m) => (
+                  <button key={m.id} onClick={() => update('mealType', m.id)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold cursor-pointer transition-all ${filters.mealType === m.id || (!filters.mealType && m.id === '') ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </Section>
+        </>
       )}
 
-      {/* ── ALL tab — show compact combined ── */}
-      {tab === 'all' && (
-        <Section title="Quick Filters" defaultOpen={false}>
-          <select value={filters.gender || ''} onChange={(e) => update('gender', e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-dark/8 bg-white text-sm outline-none focus:border-primary/40">
-            <option value="">Any Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-        </Section>
-      )}
+      {/* ── ALL tab — no sidebar filters, use top search bar ── */}
 
       <div className="flex gap-2 pt-1">
         <Button size="sm" className="flex-1 !text-xs !py-2" onClick={() => onFilterChange(filters)}>Apply</Button>
