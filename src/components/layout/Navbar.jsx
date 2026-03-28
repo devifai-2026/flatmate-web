@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, MessageCircle, User, LogOut, Plus, LayoutDashboard, Bell, Users, Heart, Sparkles, Wallet, Coins } from 'lucide-react';
+import { Menu, X, MessageCircle, User, LogOut, Plus, LayoutDashboard, Bell, Users, Heart, Sparkles, Wallet, Coins, ClipboardList } from 'lucide-react';
 import { logout } from '../../redux/slices/authSlice';
 import Button from '../ui/Button';
 import api from '../../services/api';
@@ -150,6 +150,9 @@ export default function Navbar() {
                           <Link to="/profile" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted hover:bg-surface transition-colors">
                             <User size={16} /> Profile
                           </Link>
+                          <Link to="/my-listings" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted hover:bg-surface transition-colors">
+                            <ClipboardList size={16} /> My Listings
+                          </Link>
                           <Link to="/preferences" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted hover:bg-surface transition-colors">
                             <Sparkles size={16} /> My Preferences
                           </Link>
@@ -208,6 +211,9 @@ export default function Navbar() {
                   </Link>
                   <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-muted hover:bg-surface">
                     <LayoutDashboard size={16} /> Dashboard
+                  </Link>
+                  <Link to="/my-listings" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-muted hover:bg-surface">
+                    <ClipboardList size={16} /> My Listings
                   </Link>
                   <Link to="/chat" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-muted hover:bg-surface">
                     <MessageCircle size={16} /> Messages

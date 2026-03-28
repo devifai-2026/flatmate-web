@@ -10,10 +10,12 @@ import ShareButton from '../components/ui/ShareButton';
 import ImageCarousel from '../components/ui/ImageCarousel';
 import { getRoomImage, getAvatar, ROOM_PLACEHOLDERS } from '../utils/constants';
 import api from '../services/api';
+import { useSelector } from 'react-redux';
 
 export default function PGDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useSelector((s) => s.auth);
   const [pg, setPg] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -120,7 +122,11 @@ export default function PGDetails() {
                     </div>
                   </div>
                 )}
-                <ContactButtons userId={pg.postedBy?._id} phone={pg.contactPhone || pg.postedBy?.phone} phoneVisibility={pg.phoneVisibility} listingType="pg" listingId={pg._id} size="lg" />
+                {authUser?._id !== pg.postedBy?._id ? (
+                  <ContactButtons userId={pg.postedBy?._id} listingType="pg" listingId={pg._id} size="lg" />
+                ) : (
+                  <p className="text-xs text-muted text-center bg-surface rounded-xl py-2">This is your listing</p>
+                )}
               </div>
 
               <div className="bg-surface rounded-2xl p-5">

@@ -5,8 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Check, Shield, Home, Users, Heart, CheckCircle, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../components/ui/Button';
-import { sendOtp, verifyOtp, clearError } from '../redux/slices/authSlice';
-import { LIFESTYLE_TAGS, USER_TYPES, CITY_IMAGES, DEFAULT_AVATARS, AUTH_BG } from '../utils/constants';
+import { sendOtp, verifyOtp, clearError, resetOtpState, updateUser } from '../redux/slices/authSlice';
+import { fetchProfile } from '../redux/slices/userSlice';
+import { LIFESTYLE_TAGS, USER_TYPES, DEFAULT_AVATARS, AUTH_BG } from '../utils/constants';
+import CityAutocomplete from '../components/ui/CityAutocomplete';
 import api from '../services/api';
 
 const slide = {
@@ -31,9 +33,9 @@ export default function Login() {
   const { loading, error, token, otpSent, isNewUser } = useSelector((s) => s.auth);
 
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '']);
   const otpRefs = useRef([]);
-  const [profile, setProfile] = useState({ userType: '', gender: '', city: '', profileImage: '', name: '' });
+  const [profile, setProfile] = useState({ userType: '', gender: '', city: '', profileImage: '', firstName: '', surname: '', age: '' });
   const [tags, setTags] = useState([]);
 
   useEffect(() => { if (error) { toast.error(error); dispatch(clearError()); } }, [error, dispatch]);
@@ -43,7 +45,16 @@ export default function Login() {
   useEffect(() => {
     if (token && step === 1) {
       if (isNewUser) { setDir(1); setStep(2); }
-      else { navigate('/search'); }
+      else { navigate('/search', { replace: true }); }
+    }
+  }, [token, step, isNewUser, navigate]);
+
+  // If user already has token but onboarding incomplete (returning user), redirect
+  useEffect(() => {
+    if (token && step === 0 && !isNewUser) {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      if (u.onboardingComplete === false) navigate('/onboarding', { replace: true });
+      else if (u._id) navigate('/search', { replace: true });
     }
   }, [token, step, isNewUser, navigate]);
 
@@ -56,34 +67,47 @@ export default function Login() {
   const otpChange = (i, v) => {
     if (!/^\d?$/.test(v)) return;
     const n = [...otp]; n[i] = v; setOtp(n);
-    if (v && i < 5) otpRefs.current[i + 1]?.focus();
+    if (v && i < 3) otpRefs.current[i + 1]?.focus();
   };
   const otpKey = (i, e) => { if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus(); };
 
   const verify = () => {
     const code = otp.join('');
-    if (code.length !== 6) return toast.error('Enter all 6 digits');
+    if (code.length !== 4) return toast.error('Enter all 4 digits');
     dispatch(verifyOtp({ phone: phone.replace(/\s/g, ''), otp: code }));
   };
   useEffect(() => { if (otp.every(d => d) && step === 1) verify(); }, [otp]);
 
   const saveProfile = async (e) => {
     e?.preventDefault();
-    if (!profile.name) return toast.error('Enter your name');
+    if (!profile.firstName.trim()) return toast.error('Enter your first name');
+    if (!profile.age || Number(profile.age) < 18) return toast.error('Age must be 18 or above');
     if (!profile.userType) return toast.error('Select who you are');
     if (!profile.gender) return toast.error('Select your gender');
     if (!profile.city) return toast.error('Select your city');
-    try { await api.put('/onboarding/step1', profile); setDir(1); setStep(3); }
-    catch (err) { toast.error(err.response?.data?.message || 'Failed to save'); }
+    const payload = { ...profile, age: Number(profile.age), name: [profile.firstName, profile.surname].filter(Boolean).join(' ') };
+    try {
+      await api.put('/onboarding/step1', payload);
+      dispatch(updateUser({ name: payload.name, profileImage: profile.profileImage, gender: profile.gender, city: profile.city }));
+      setDir(1); setStep(3);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to save'); }
   };
 
   const saveTags = async () => {
     if (tags.length < 5) return toast.error('Select at least 5 tags');
-    try { await api.put('/onboarding/step2', { lifestyleTags: tags }); toast.success('Welcome to FlatMate!'); navigate('/search'); }
-    catch (err) { toast.error(err.response?.data?.message || 'Failed to save'); }
+    try {
+      await api.put('/onboarding/step2', { lifestyleTags: tags });
+      dispatch(updateUser({ onboardingComplete: true, lifestyleTags: tags }));
+      dispatch(fetchProfile());
+      toast.success('Welcome to FlatMate!');
+      navigate('/search', { replace: true });
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to save'); }
   };
 
-  const back = () => { setDir(-1); setStep(s => Math.max(0, s - 1)); };
+  const back = () => {
+    if (step === 1) { dispatch(resetOtpState()); setOtp(['', '', '', '']); }
+    setDir(-1); setStep(s => Math.max(0, s - 1));
+  };
   const toggleTag = (id) => setTags(p => p.includes(id) ? p.filter(t => t !== id) : [...p, id]);
 
   const lc = leftContent[step];
@@ -183,7 +207,7 @@ export default function Login() {
                 </form>
                 {/* Demo accounts */}
                 <div className="mt-5 bg-primary/5 rounded-xl p-3 border border-primary/10">
-                  <p className="text-[10px] font-semibold text-primary mb-2">Demo Accounts — OTP: 123456</p>
+                  <p className="text-[10px] font-semibold text-primary mb-2">Demo Accounts — OTP: 1234</p>
                   <div className="space-y-1 max-h-44 overflow-y-auto">
                     {[
                       { label: 'Arjun (Lister)', phone: '9876543210', city: 'Mumbai' },
@@ -220,7 +244,7 @@ export default function Login() {
                 </div>
                 <div className="text-center mb-6">
                   <h2 className="text-2xl font-extrabold text-dark mb-1">Verify OTP</h2>
-                  <p className="text-muted text-sm">Code sent to <span className="text-dark font-semibold">+91 {phone}</span></p>
+                  <p className="text-muted text-sm">Code sent to <span className="text-dark font-semibold">+91 {phone || '—'}</span></p>
                 </div>
 
                 <div className="flex justify-center gap-2.5 mb-6">
@@ -249,21 +273,48 @@ export default function Login() {
             {/* ── STEP 2: Profile (new users only) ── */}
             {step === 2 && (
               <motion.div key="s2" custom={dir} variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
-                <div className="mb-5">
-                  <h2 className="text-2xl font-extrabold text-dark mb-1">Complete your profile</h2>
-                  <p className="text-muted text-sm">This takes 30 seconds</p>
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <span className="text-primary font-bold text-sm">2</span>
+                    </div>
+                    <div className="flex-1 h-1.5 bg-dark/5 rounded-full overflow-hidden">
+                      <div className="w-1/2 h-full bg-primary rounded-full" />
+                    </div>
+                  </div>
+                  <h2 className="text-2xl font-extrabold text-dark mb-1">Set up your profile</h2>
+                  <p className="text-muted text-sm">This helps us find the best matches for you</p>
                 </div>
 
                 <div className="space-y-4">
+                  {/* Name fields */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">First Name *</label>
+                      <input value={profile.firstName} onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                        placeholder="First name"
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-dark/8 text-dark text-sm outline-none focus:border-primary/40 shadow-sm transition-all" autoFocus />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">Surname</label>
+                      <input value={profile.surname} onChange={(e) => setProfile({ ...profile, surname: e.target.value })}
+                        placeholder="Surname"
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-dark/8 text-dark text-sm outline-none focus:border-primary/40 shadow-sm transition-all" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg -mt-1">Name cannot be changed after setup</p>
+
+                  {/* Age */}
                   <div>
-                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">Your Name</label>
-                    <input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                      placeholder="Enter your full name"
+                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">Age *</label>
+                    <input type="number" min={18} max={120} value={profile.age} onChange={(e) => setProfile({ ...profile, age: e.target.value })}
+                      placeholder="e.g. 25"
                       className="w-full px-4 py-3 rounded-xl bg-white border border-dark/8 text-dark text-sm outline-none focus:border-primary/40 shadow-sm transition-all" />
                   </div>
 
+                  {/* I am a */}
                   <div>
-                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">I am a</label>
+                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">I am a *</label>
                     <div className="space-y-1.5">
                       {USER_TYPES.map(t => (
                         <button key={t.id} onClick={() => setProfile({ ...profile, userType: t.id })}
@@ -277,57 +328,80 @@ export default function Login() {
                     </div>
                   </div>
 
+                  {/* Gender */}
                   <div>
-                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">Gender</label>
+                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">Gender *</label>
                     <div className="flex gap-2">
-                      {['male', 'female'].map(g => (
-                        <button key={g} onClick={() => setProfile({ ...profile, gender: g })}
-                          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer shadow-sm ${
-                            profile.gender === g ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-white text-muted border border-dark/8'}`}>
-                          {g === 'male' ? 'Male' : 'Female'}
+                      {[{ id: 'male', label: 'Male', emoji: '👨' }, { id: 'female', label: 'Female', emoji: '👩' }].map(g => (
+                        <button key={g.id} onClick={() => setProfile({ ...profile, gender: g.id })}
+                          className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 ${
+                            profile.gender === g.id ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-white text-muted border border-dark/8 hover:border-dark/15'}`}>
+                          <span>{g.emoji}</span> {g.label}
                         </button>
                       ))}
                     </div>
                   </div>
 
+                  {/* Address */}
                   <div>
-                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">City</label>
-                    <select value={profile.city} onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-dark/8 text-dark text-sm outline-none focus:border-primary/40 shadow-sm transition-all appearance-none">
-                      <option value="">Select your city</option>
-                      {Object.values(CITY_IMAGES).map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
-                    </select>
+                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">Location *</label>
+                    <CityAutocomplete
+                      value={profile.city}
+                      onChange={(city) => setProfile({ ...profile, city })}
+                      types="address,poi,neighborhood,locality,place"
+                      placeholder="Search area, neighborhood or city"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-dark/8 text-dark text-sm outline-none focus:border-primary/40 shadow-sm transition-all"
+                    />
                   </div>
 
+                  {/* Avatar */}
                   <div>
-                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">Avatar</label>
-                    <div className="flex justify-center gap-2">
+                    <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5 block">Choose Avatar</label>
+                    <div className="flex justify-center gap-2.5">
                       {DEFAULT_AVATARS.map(url => (
                         <button key={url} onClick={() => setProfile({ ...profile, profileImage: url })}
-                          className={`w-10 h-10 rounded-full overflow-hidden border-2 transition-all cursor-pointer ${
+                          className={`w-11 h-11 rounded-full overflow-hidden border-2 transition-all cursor-pointer ${
                             profile.profileImage === url ? 'border-primary ring-2 ring-primary/20 scale-110' : 'border-transparent hover:border-dark/15'}`}>
-                          <img src={url} alt="" className="w-full h-full" />
+                          <img src={url} alt="" className="w-full h-full object-cover" />
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <Button size="lg" className="w-full rounded-2xl" onClick={saveProfile}>
-                    Continue <ArrowRight size={18} />
+                    Continue to Preferences <ArrowRight size={18} />
                   </Button>
                 </div>
               </motion.div>
             )}
 
-            {/* ── STEP 3: Lifestyle (new users only) ── */}
+            {/* ── STEP 3: Lifestyle / Preferences (new users only) ── */}
             {step === 3 && (
               <motion.div key="s3" custom={dir} variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
-                <div className="mb-5">
-                  <h2 className="text-2xl font-extrabold text-dark mb-1">Your lifestyle</h2>
-                  <p className="text-muted text-sm">Pick at least 5 that describe you</p>
-                  <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full mt-2 ${
-                    tags.length >= 5 ? 'bg-primary/10 text-primary' : 'bg-dark/5 text-muted'}`}>
-                    {tags.length} / 5 {tags.length >= 5 && <Check size={12} />}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <span className="text-primary font-bold text-sm">3</span>
+                    </div>
+                    <div className="flex-1 h-1.5 bg-dark/5 rounded-full overflow-hidden">
+                      <div className="w-full h-full bg-primary rounded-full" />
+                    </div>
+                  </div>
+                  <h2 className="text-2xl font-extrabold text-dark mb-1">Choose your vibe</h2>
+                  <p className="text-muted text-sm">Select at least 5 lifestyle tags that describe you</p>
+                </div>
+
+                {/* Progress indicator */}
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex-1 h-2 bg-dark/5 rounded-full overflow-hidden">
+                    <motion.div
+                      className={`h-full rounded-full ${tags.length >= 5 ? 'bg-primary' : 'bg-primary/40'}`}
+                      animate={{ width: `${Math.min((tags.length / 5) * 100, 100)}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                  <span className={`text-xs font-bold ${tags.length >= 5 ? 'text-primary' : 'text-muted'}`}>
+                    {tags.length >= 5 ? <Check size={14} className="inline" /> : `${tags.length}/5`}
                   </span>
                 </div>
 
@@ -336,10 +410,10 @@ export default function Login() {
                     const on = tags.includes(tag.id);
                     return (
                       <motion.button key={tag.id} whileTap={{ scale: 0.95 }} onClick={() => toggleTag(tag.id)}
-                        className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border transition-all cursor-pointer shadow-sm ${
-                          on ? 'border-primary bg-primary/5' : 'border-dark/6 bg-white hover:border-dark/12'}`}>
-                        <span className="text-base">{tag.emoji}</span>
-                        <span className={`text-[8px] font-medium leading-tight ${on ? 'text-primary' : 'text-muted'}`}>{tag.label}</span>
+                        className={`flex flex-col items-center gap-1.5 py-3 px-1.5 rounded-xl border transition-all cursor-pointer ${
+                          on ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-dark/6 bg-white hover:border-dark/12 shadow-sm'}`}>
+                        <span className="text-lg">{tag.emoji}</span>
+                        <span className={`text-[9px] font-semibold leading-tight text-center ${on ? 'text-primary' : 'text-muted'}`}>{tag.label}</span>
                       </motion.button>
                     );
                   })}

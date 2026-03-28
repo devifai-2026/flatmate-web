@@ -23,6 +23,8 @@ const Teams = lazy(() => import('./pages/Teams'))
 const Notifications = lazy(() => import('./pages/Notifications'))
 const Preferences = lazy(() => import('./pages/Preferences'))
 const Wallet = lazy(() => import('./pages/Wallet'))
+const ManageListings = lazy(() => import('./pages/ManageListings'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 
 function PageLoader() {
   return (
@@ -67,6 +69,8 @@ export default function App() {
         <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
         <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+        <Route path="/my-listings" element={<ProtectedRoute><ManageListings /></ProtectedRoute>} />
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       </Routes>
     </Suspense>
   )

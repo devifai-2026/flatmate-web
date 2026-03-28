@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, MessageCircle, ArrowLeft, MoreVertical, Image, Mic, Video, Check, CheckCheck, Ban, User, MapPin, Plus, Users, Search, Loader2 } from 'lucide-react';
+import VoiceMessage from '../components/ui/VoiceMessage';
 import toast from 'react-hot-toast';
-import MainLayout from '../layouts/MainLayout';
+import Navbar from '../components/layout/Navbar';
 import { fetchConversations, fetchMessages, sendMessage, setActiveConversation, addMessage, markMessagesRead } from '../redux/slices/chatSlice';
 import { getAvatar } from '../utils/constants';
 import useSocket from '../hooks/useSocket';
@@ -148,13 +149,17 @@ export default function Chat() {
 
     socket.emit('join-conversation', { conversationId: activeConversation });
     // Immediately mark as read when opening a conversation
-    api.put(`/chat/${activeConversation}/read`).catch(() => {});
+    api.put(`/chat/${activeConversation}/read`).then(() => {
+      dispatch(fetchConversations()); // refresh unread counts in sidebar
+    }).catch(() => {});
     socket.emit('mark-read', { conversationId: activeConversation });
 
     const handleNewMessageAutoRead = ({ conversationId }) => {
       // If message arrives in the conversation we're viewing, mark read instantly
       if (conversationId === activeConversation) {
-        api.put(`/chat/${conversationId}/read`).catch(() => {});
+        api.put(`/chat/${conversationId}/read`).then(() => {
+          dispatch(fetchConversations()); // refresh unread counts
+        }).catch(() => {});
         socket.emit('mark-read', { conversationId });
       }
     };
@@ -191,7 +196,9 @@ export default function Chat() {
     dispatch(fetchMessages({ conversationId: conv._id }));
     setMobileShowChat(true);
     setIsTyping(false);
-    api.put(`/chat/${conv._id}/read`).catch(() => {});
+    api.put(`/chat/${conv._id}/read`).then(() => {
+      dispatch(fetchConversations()); // clear unread badge immediately
+    }).catch(() => {});
     if (socket) socket.emit('mark-read', { conversationId: conv._id });
   };
 
@@ -278,29 +285,63 @@ export default function Chat() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  const handleMediaUpload = (e, type) => {
+  const [uploading, setUploading] = useState(false);
+
+  // Upload image/video to ImgBB (images) or backend (video/audio)
+  const uploadToImgBB = async (file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('key', import.meta.env.VITE_IMGBB_API_KEY);
+    const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.success) throw new Error('Upload failed');
+    return data.data.display_url;
+  };
+
+  const uploadToBackend = async (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await api.post('/chat/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return res.data.data.url;
+  };
+
+  const handleMediaUpload = async (e, type) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setShowAttach(false);
+    e.target.value = '';
 
-    // Convert to base64 data URL for demo (in production use S3/Cloudinary upload)
-    const reader = new FileReader();
-    reader.onload = () => {
-      api.post(`/chat/${activeConversation}/messages`, {
+    // Size limits
+    const maxSize = type === 'image' ? 10 : 50;
+    const fileMB = (file.size / (1024 * 1024)).toFixed(1);
+    if (file.size > maxSize * 1024 * 1024) {
+      return toast.error(`File too large (${fileMB}MB). Max ${maxSize}MB for ${type === 'image' ? 'photos' : 'videos'}`);
+    }
+
+    setUploading(true);
+    const tid = toast.loading(`Sending ${type}...`);
+    try {
+      let url;
+      if (type === 'image') {
+        url = await uploadToImgBB(file);
+      } else {
+        url = await uploadToBackend(file);
+      }
+      await api.post(`/chat/${activeConversation}/messages`, {
         text: '',
         mediaType: type,
-        mediaUrl: reader.result,
-      }).then(() => {
-        dispatch(fetchMessages({ conversationId: activeConversation }));
-      }).catch(() => toast.error(`Failed to send ${type}`));
-    };
-    reader.readAsDataURL(file);
-    e.target.value = ''; // reset input
+        mediaUrl: url,
+      });
+      dispatch(fetchMessages({ conversationId: activeConversation }));
+      toast.success(`${type === 'image' ? 'Photo' : 'Video'} sent`, { id: tid });
+    } catch {
+      toast.error(`Failed to send ${type}`, { id: tid });
+    }
+    setUploading(false);
   };
 
   const handleVoiceRecord = async () => {
     if (isRecording) {
-      // Stop recording
       mediaRecorderRef.current?.stop();
       setIsRecording(false);
       return;
@@ -308,48 +349,54 @@ export default function Chat() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' });
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
-      recorder.ondataavailable = (e) => { audioChunksRef.current.push(e.data); };
-      recorder.onstop = () => {
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onload = () => {
-          api.post(`/chat/${activeConversation}/messages`, {
+        if (blob.size < 1000) return; // too short, ignore
+
+        const tid = toast.loading('Sending voice...');
+        try {
+          const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
+          const url = await uploadToBackend(file);
+          await api.post(`/chat/${activeConversation}/messages`, {
             text: '',
             mediaType: 'audio',
-            mediaUrl: reader.result,
-          }).then(() => {
-            dispatch(fetchMessages({ conversationId: activeConversation }));
-            toast.success('Voice sent');
-          }).catch(() => toast.error('Failed to send audio'));
-        };
-        reader.readAsDataURL(blob);
-        stream.getTracks().forEach((t) => t.stop());
+            mediaUrl: url,
+          });
+          dispatch(fetchMessages({ conversationId: activeConversation }));
+          toast.success('Voice sent', { id: tid });
+        } catch {
+          toast.error('Failed to send voice', { id: tid });
+        }
       };
 
-      recorder.start();
+      recorder.start(250); // collect in 250ms chunks for smoother recording
       setIsRecording(true);
-      toast('Recording... tap mic again to stop', { icon: '🎙️' });
+      toast('Recording... tap mic to stop', { icon: '🎙️', duration: 2000 });
     } catch {
       toast.error('Microphone access denied');
     }
   };
 
-  const handleBlock = async (userId) => {
+  const handleBlock = async (targetUserId) => {
+    if (!targetUserId) return toast.error('Cannot identify user');
     try {
-      await api.post('/chat/block', { userId });
+      await api.post('/chat/block', { userId: targetUserId });
       toast.success('User blocked');
       setShowMenu(false);
       dispatch(fetchConversations());
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to block'); }
   };
 
-  const handleUnblock = async (userId) => {
+  const handleUnblock = async (targetUserId) => {
+    if (!targetUserId) return toast.error('Cannot identify user');
     try {
-      await api.post('/chat/unblock', { userId });
+      await api.post('/chat/unblock', { userId: targetUserId });
       toast.success('User unblocked');
       setShowMenu(false);
       dispatch(fetchConversations());
@@ -358,8 +405,8 @@ export default function Chat() {
 
   const activeMessages = messages[activeConversation] || [];
   const activePag = messagePagination[activeConversation];
-  const activeConv = conversations.find((c) => c._id === activeConversation);
-  const getOther = (conv) => conv?.participants?.find((p) => p._id !== user?._id);
+  const activeConv = conversations.find((c) => c._id?.toString() === activeConversation?.toString());
+  const getOther = (conv) => conv?.participants?.find((p) => p._id?.toString() !== user?._id?.toString());
   const isGroupChat = (conv) => conv?.isGroup;
 
   // Load older messages on scroll up
@@ -392,23 +439,24 @@ export default function Chat() {
   }, {});
 
   return (
-    <MainLayout>
-      <div className="max-w-5xl mx-auto px-0 sm:px-4 lg:px-8 py-0 sm:py-6">
-        <div className="bg-white sm:rounded-2xl shadow-sm border-0 sm:border border-dark/6 overflow-hidden" style={{ height: 'calc(100dvh - 64px)' }}>
+    <div className="h-screen flex flex-col bg-surface overflow-hidden">
+      <Navbar />
+      <div className="flex-1 max-w-5xl w-full mx-auto px-0 sm:px-4 lg:px-8 py-0 sm:py-3 overflow-hidden">
+        <div className="bg-white sm:rounded-2xl shadow-lg sm:border border-dark/5 overflow-hidden h-full">
           <div className="flex h-full">
 
             {/* ═══ LEFT: Conversation List ═══ */}
-            <div className={`w-full sm:w-80 border-r border-dark/6 flex flex-col ${mobileShowChat ? 'hidden sm:flex' : 'flex'}`}>
-              <div className="px-4 py-3 border-b border-dark/6 bg-surface space-y-2">
-                <h2 className="font-extrabold text-dark text-base">Chats</h2>
+            <div className={`w-full sm:w-80 border-r border-dark/5 flex flex-col bg-white ${mobileShowChat ? 'hidden sm:flex' : 'flex'}`}>
+              <div className="px-4 py-3 border-b border-dark/5 space-y-2.5">
+                <h2 className="font-extrabold text-dark text-lg">Chats</h2>
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/50" />
                   <input value={chatSearch} onChange={(e) => setChatSearch(e.target.value)}
                     placeholder="Search conversations..."
-                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-white border border-dark/8 text-xs outline-none focus:border-primary/30 transition-colors" />
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface border-0 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all placeholder-muted/40" />
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto no-scrollbar">
                 {loading ? (
                   <div className="p-4 space-y-3">
                     {[0,1,2,3,4].map((i) => (
@@ -433,8 +481,8 @@ export default function Chat() {
                     const hasUnread = conv.unreadCount > 0;
                     return (
                       <button key={conv._id} onClick={() => selectConversation(conv)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer text-left border-b border-dark/3 ${
-                          isActive ? 'bg-primary/5' : 'hover:bg-surface'}`}>
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 transition-all cursor-pointer text-left ${
+                          isActive ? 'bg-primary/5 border-r-2 border-r-primary' : 'hover:bg-surface/80 border-r-2 border-r-transparent'}`}>
                         <div className="relative flex-shrink-0">
                           {isGroup ? (
                             <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center">
@@ -452,7 +500,11 @@ export default function Chat() {
                           <div className="flex items-center justify-between mt-0.5">
                             <p className={`text-xs truncate ${hasUnread ? 'text-dark font-medium' : 'text-muted'}`}>
                               {conv.lastMessage?.sender?.toString() === user?._id && <span className="text-muted">You: </span>}
-                              {conv.lastMessage?.text || 'No messages'}
+                              {conv.lastMessage?.mediaType === 'image' ? '📷 Photo'
+                                : conv.lastMessage?.mediaType === 'audio' ? '🎙️ Voice'
+                                : conv.lastMessage?.mediaType === 'video' ? '🎬 Video'
+                                : conv.lastMessage?.mediaType === 'location' ? '📍 Location'
+                                : conv.lastMessage?.text || 'No messages'}
                             </p>
                             {hasUnread && (
                               <span className="min-w-[18px] h-[18px] bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1 flex-shrink-0 ml-1">
@@ -471,19 +523,19 @@ export default function Chat() {
             {/* ═══ RIGHT: Chat Area ═══ */}
             <div className={`flex-1 flex flex-col ${!mobileShowChat ? 'hidden sm:flex' : 'flex'}`}>
               {!activeConversation ? (
-                <div className="flex-1 flex items-center justify-center bg-surface/50">
+                <div className="flex-1 flex items-center justify-center bg-[#FDF8F4]">
                   <div className="text-center">
-                    <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <MessageCircle size={32} className="text-primary/30" />
+                    <div className="w-24 h-24 bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-5 rotate-6">
+                      <MessageCircle size={36} className="text-primary/40 -rotate-6" />
                     </div>
-                    <p className="text-dark font-semibold">Select a conversation</p>
-                    <p className="text-xs text-muted mt-1">Choose from your existing chats</p>
+                    <p className="text-dark font-bold text-lg">Your messages</p>
+                    <p className="text-xs text-muted mt-1.5 max-w-[200px] mx-auto leading-relaxed">Select a conversation to start chatting</p>
                   </div>
                 </div>
               ) : (
                 <>
                   {/* Chat Header */}
-                  <div className="px-4 py-2.5 border-b border-dark/6 bg-surface flex items-center gap-3">
+                  <div className="px-4 py-2.5 border-b border-dark/5 bg-white/80 backdrop-blur-sm flex items-center gap-3">
                     <button onClick={() => setMobileShowChat(false)} className="sm:hidden p-1 cursor-pointer">
                       <ArrowLeft size={20} className="text-dark" />
                     </button>
@@ -510,43 +562,24 @@ export default function Chat() {
                       </button>
                     )}
 
-                    {/* Menu — only for 1-on-1 chats */}
+                    {/* Block/Unblock — only for 1-on-1 chats */}
                     {!isGroupChat(activeConv) && (
-                      <div className="relative">
-                        <button onClick={() => setShowMenu(!showMenu)} className="p-2 hover:bg-dark/5 rounded-lg cursor-pointer">
-                          <MoreVertical size={18} className="text-muted" />
+                      activeConv?.isBlocked ? (
+                        <button onClick={() => handleUnblock(getOther(activeConv)?._id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface text-dark hover:bg-dark/10 transition-colors cursor-pointer flex items-center gap-1.5 flex-shrink-0">
+                          <Ban size={13} /> Unblock
                         </button>
-                        <AnimatePresence>
-                          {showMenu && (
-                            <>
-                              <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                              <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }}
-                                className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-dark/6 py-1 z-50">
-                                <button onClick={() => { navigate(`/profile/${getOther(activeConv)?._id}`); setShowMenu(false); }}
-                                  className="w-full px-3 py-2 text-left text-sm text-dark hover:bg-surface flex items-center gap-2 cursor-pointer">
-                                  <User size={14} /> View Profile
-                                </button>
-                                {activeConv?.isBlocked ? (
-                                  <button onClick={() => handleUnblock(getOther(activeConv)?._id)}
-                                    className="w-full px-3 py-2 text-left text-sm text-dark hover:bg-surface flex items-center gap-2 cursor-pointer">
-                                    <Ban size={14} /> Unblock
-                                  </button>
-                                ) : (
-                                  <button onClick={() => handleBlock(getOther(activeConv)?._id)}
-                                    className="w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 flex items-center gap-2 cursor-pointer">
-                                    <Ban size={14} /> Block User
-                                  </button>
-                                )}
-                              </motion.div>
-                            </>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                      ) : (
+                        <button onClick={() => handleBlock(getOther(activeConv)?._id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-1.5 flex-shrink-0">
+                          <Ban size={13} /> Block
+                        </button>
+                      )
                     )}
                   </div>
 
                   {/* Messages */}
-                  <div ref={scrollContainerRef} data-scroll-container className="flex-1 overflow-y-auto px-4 py-3 bg-[#FDF8F4] relative" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='30' y='35' text-anchor='middle' font-size='10' fill='%23FF1351' opacity='0.03' font-weight='bold' font-family='sans-serif'%3EFM%3C/text%3E%3C/svg%3E")`, backgroundSize: '60px 60px' }}
+                  <div ref={scrollContainerRef} data-scroll-container className="flex-1 overflow-y-auto chat-scroll px-4 py-3 bg-[#FDF8F4] relative" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='30' y='35' text-anchor='middle' font-size='10' fill='%23FF1351' opacity='0.03' font-weight='bold' font-family='sans-serif'%3EFM%3C/text%3E%3C/svg%3E")`, backgroundSize: '60px 60px' }}
                     onScroll={(e) => {
                       // Load older messages when scrolled near the top
                       if (e.target.scrollTop < 80 && hasOlderMessages && !loadingOlder) {
@@ -601,13 +634,20 @@ export default function Chat() {
                                 )}
                                 {/* Media */}
                                 {msg.mediaType === 'image' && msg.mediaUrl && (
-                                  <img src={msg.mediaUrl} alt="" className={`rounded-xl mb-1 max-w-full max-h-60 object-cover ${isMe ? 'rounded-br-sm' : 'rounded-bl-sm'}`} />
+                                  <div className={`rounded-2xl mb-1 overflow-hidden shadow-sm ${isMe ? 'rounded-br-sm' : 'rounded-bl-sm'}`}>
+                                    <img src={msg.mediaUrl} alt="" className="max-w-full max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => window.open(msg.mediaUrl, '_blank')} loading="lazy" />
+                                  </div>
                                 )}
                                 {msg.mediaType === 'audio' && msg.mediaUrl && (
-                                  <audio controls src={msg.mediaUrl} className="max-w-full mb-1" />
+                                  <VoiceMessage src={msg.mediaUrl} msgId={msg._id} isMe={isMe} time={formatTime(msg.createdAt)}>
+                                    <Ticks status={msg.status} isMe={isMe} />
+                                  </VoiceMessage>
                                 )}
                                 {msg.mediaType === 'video' && msg.mediaUrl && (
-                                  <video controls src={msg.mediaUrl} className={`rounded-xl mb-1 max-w-full max-h-60 ${isMe ? 'rounded-br-sm' : 'rounded-bl-sm'}`} />
+                                  <div className={`rounded-2xl mb-1 overflow-hidden shadow-sm ${isMe ? 'rounded-br-sm' : 'rounded-bl-sm'}`}>
+                                    <video controls src={msg.mediaUrl} className="max-w-full max-h-64 rounded-xl" />
+                                  </div>
                                 )}
                                 {msg.mediaType === 'location' && msg.location && (
                                   <a href={`https://www.google.com/maps?q=${msg.location.lat},${msg.location.lng}`} target="_blank" rel="noopener noreferrer"
@@ -648,15 +688,32 @@ export default function Chat() {
 
                   {/* Input bar */}
                   {!isGroupChat(activeConv) && activeConv?.isBlocked ? (
-                    <div className="px-4 py-3 border-t border-dark/6 bg-surface text-center text-sm text-muted">
-                      This user is blocked. <button onClick={() => handleUnblock(getOther(activeConv)?._id)} className="text-primary font-semibold cursor-pointer">Unblock</button>
+                    <div className="px-4 py-3.5 border-t border-dark/5 bg-surface/50 text-center text-sm text-muted">
+                      <Ban size={14} className="inline mr-1.5 -mt-0.5" />This user is blocked. <button onClick={() => handleUnblock(getOther(activeConv)?._id)} className="text-primary font-semibold cursor-pointer hover:underline">Unblock</button>
                     </div>
                   ) : (
-                    <form onSubmit={handleSend} className="px-3 py-2 border-t border-dark/6 bg-white flex items-center gap-1.5 relative">
+                    <form onSubmit={handleSend} className="px-3 py-2.5 border-t border-dark/5 bg-white/90 backdrop-blur-sm relative">
+                      {/* Upload / Recording indicator */}
+                      {(uploading || isRecording) && (
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white shadow-lg border border-dark/8 rounded-full px-3 py-1 flex items-center gap-2 z-10">
+                          {isRecording ? (
+                            <>
+                              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                              <span className="text-[10px] font-semibold text-red-500">Recording...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Loader2 size={12} className="text-primary animate-spin" />
+                              <span className="text-[10px] font-semibold text-primary">Uploading...</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5">
                       {/* + button — opens media popup */}
                       <div className="relative">
                         <button type="button" onClick={() => setShowAttach(!showAttach)}
-                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${showAttach ? 'bg-primary text-white rotate-45' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${showAttach ? 'bg-primary text-white rotate-45 shadow-lg shadow-primary/20' : 'text-muted hover:text-primary hover:bg-primary/5'}`}>
                           <Plus size={20} />
                         </button>
                         <AnimatePresence>
@@ -670,20 +727,10 @@ export default function Chat() {
                                   <span className="text-sm text-dark font-medium">Photo</span>
                                   <input type="file" accept="image/*" className="hidden" onChange={(e) => handleMediaUpload(e, 'image')} />
                                 </label>
-                                <label className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface cursor-pointer transition-colors">
-                                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center"><Video size={16} className="text-primary" /></div>
-                                  <span className="text-sm text-dark font-medium">Video</span>
-                                  <input type="file" accept="video/*" className="hidden" onChange={(e) => handleMediaUpload(e, 'video')} />
-                                </label>
                                 <button type="button" onClick={() => { handleSendLiveLocation(); setShowAttach(false); }}
                                   className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface cursor-pointer transition-colors">
                                   <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center"><MapPin size={16} className="text-primary" /></div>
                                   <span className="text-sm text-dark font-medium">Live Location</span>
-                                </button>
-                                <button type="button" onClick={() => { handleShareMapLink(); setShowAttach(false); }}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-surface cursor-pointer transition-colors">
-                                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center"><MapPin size={16} className="text-primary" /></div>
-                                  <span className="text-sm text-dark font-medium">Share Map Pin</span>
                                 </button>
                               </motion.div>
                             </>
@@ -693,20 +740,21 @@ export default function Chat() {
 
                       {/* Mic button */}
                       <button type="button" onClick={handleVoiceRecord}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${isRecording ? 'bg-primary text-white animate-pulse' : 'bg-surface text-muted hover:bg-dark/5'}`}>
+                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30' : 'text-muted hover:text-primary hover:bg-primary/5'}`}>
                         <Mic size={18} />
                       </button>
 
                       {/* Text input */}
                       <input value={text} onChange={handleTextChange}
                         placeholder="Type a message..."
-                        className="flex-1 px-4 py-2.5 rounded-full bg-surface border border-dark/6 text-sm outline-none focus:border-primary/30 transition-colors" />
+                        className="flex-1 px-4 py-2.5 rounded-full bg-surface border-0 text-sm outline-none focus:ring-2 focus:ring-primary/10 transition-all placeholder-muted/40" />
 
                       {/* Send button */}
                       <button type="submit" disabled={!text.trim()}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${text.trim() ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-dark/5 text-muted'}`}>
-                        <Send size={16} />
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${text.trim() ? 'bg-primary text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 scale-100' : 'bg-transparent text-muted/30 scale-90'}`}>
+                        <Send size={17} className={text.trim() ? '' : ''} />
                       </button>
+                      </div>
                     </form>
                   )}
                 </>
@@ -715,6 +763,6 @@ export default function Chat() {
           </div>
         </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }

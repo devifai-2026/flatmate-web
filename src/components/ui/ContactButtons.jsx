@@ -1,31 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { MessageCircle, Phone, Lock, Loader2, Coins } from 'lucide-react';
+import { MessageCircle, Lock, Loader2, Coins } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fetchBalance, addUnlocked } from '../../redux/slices/walletSlice';
 import api from '../../services/api';
 
 /**
- * Chat + Call buttons for cards and detail pages.
- * Checks phoneVisibility: if masked + not unlocked → show lock + pay button.
- * @param {string} userId - The user to contact (owner/poster)
- * @param {string} phone - Phone number
- * @param {string} phoneVisibility - 'reveal' | 'masked'
- * @param {string} listingType - 'room' | 'pg' | 'requirement'
- * @param {string} listingId - The listing ID
- * @param {string} size - 'sm' for cards, 'lg' for detail pages
+ * Chat button for cards and detail pages.
+ * If masked + not unlocked → show lock + pay button (19 tokens).
+ * No call button — users share numbers in chat.
  */
-export default function ContactButtons({ userId, phone, phoneVisibility = 'masked', listingType, listingId, size = 'sm', className = '' }) {
+export default function ContactButtons({ userId, listingType, listingId, size = 'sm', className = '' }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { token, user } = useSelector((s) => s.auth);
   const { balance, unlockedListings } = useSelector((s) => s.wallet);
   const [unlocking, setUnlocking] = useState(false);
-  const [revealedPhone, setRevealedPhone] = useState(null);
 
   const isOwner = userId === user?._id;
-  const isUnlocked = isOwner || phoneVisibility === 'reveal' || unlockedListings.some(
+  const isUnlocked = isOwner || unlockedListings.some(
     (u) => u.listingType === listingType && u.listingId === listingId
   );
 
@@ -42,16 +36,6 @@ export default function ContactButtons({ userId, phone, phoneVisibility = 'maske
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to start chat');
     }
-  };
-
-  const handleCall = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!token) return toast.error('Login to call');
-    if (!isUnlocked) return handleUnlock(e);
-    const p = revealedPhone || phone;
-    if (!p) return toast.error('Phone number not available');
-    window.location.href = `tel:${p}`;
   };
 
   const handleUnlock = async (e) => {
@@ -71,7 +55,6 @@ export default function ContactButtons({ userId, phone, phoneVisibility = 'maske
       const res = await api.post('/wallet/unlock', { listingType, listingId });
       const data = res.data.data;
       toast.success(data.message);
-      setRevealedPhone(data.phone);
       dispatch(addUnlocked({ listingType, listingId }));
       dispatch(fetchBalance());
     } catch (err) {
@@ -92,9 +75,9 @@ export default function ContactButtons({ userId, phone, phoneVisibility = 'maske
       return (
         <div className={`space-y-2 ${className}`}>
           <button onClick={handleUnlock} disabled={unlocking}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-all cursor-pointer shadow-md shadow-primary/20 disabled:opacity-60">
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-all cursor-pointer shadow-md shadow-primary/20 disabled:opacity-60">
             {unlocking ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
-            Unlock Chat & Call — 19 Tokens
+            Unlock Chat — 19 Tokens
           </button>
           <p className="text-center text-[10px] text-muted flex items-center justify-center gap-1">
             <Coins size={10} /> Balance: {balance} tokens
@@ -104,14 +87,10 @@ export default function ContactButtons({ userId, phone, phoneVisibility = 'maske
       );
     }
     return (
-      <div className={`flex gap-2 ${className}`}>
+      <div className={className}>
         <button onClick={handleChat}
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-all cursor-pointer shadow-md shadow-primary/20">
-          <MessageCircle size={16} /> Chat
-        </button>
-        <button onClick={handleCall}
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-dark font-semibold text-sm border border-dark/8 hover:border-primary hover:text-primary transition-all cursor-pointer">
-          <Phone size={16} /> Call
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-all cursor-pointer shadow-md shadow-primary/20">
+          <MessageCircle size={16} /> Start Chat
         </button>
       </div>
     );
@@ -137,11 +116,6 @@ export default function ContactButtons({ userId, phone, phoneVisibility = 'maske
         className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary hover:text-white text-primary transition-all cursor-pointer"
         title="Chat">
         <MessageCircle size={14} />
-      </button>
-      <button onClick={handleCall}
-        className="w-8 h-8 rounded-full bg-dark/5 flex items-center justify-center hover:bg-dark/10 text-dark transition-all cursor-pointer"
-        title="Call">
-        <Phone size={14} />
       </button>
     </div>
   );

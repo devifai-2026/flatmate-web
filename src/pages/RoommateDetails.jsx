@@ -8,11 +8,13 @@ import ContactButtons from '../components/ui/ContactButtons';
 import SaveButton from '../components/ui/SaveButton';
 import ShareButton from '../components/ui/ShareButton';
 import { getAvatar } from '../utils/constants';
+import { useSelector } from 'react-redux';
 import api from '../services/api';
 
 export default function RoommateDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useSelector((s) => s.auth);
   const [req, setReq] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +64,11 @@ export default function RoommateDetails() {
               </div>
             </div>
 
-            <ContactButtons userId={poster?._id} phone={req?.contactPhone || poster?.phone} phoneVisibility={req?.phoneVisibility} listingType="requirement" listingId={req?._id} size="lg" className="mt-5" />
+            {authUser?._id !== poster?._id ? (
+              <ContactButtons userId={poster?._id} listingType="requirement" listingId={req?._id} size="lg" className="mt-5" />
+            ) : (
+              <p className="text-xs text-muted text-center bg-surface rounded-xl py-2 mt-5">This is your listing</p>
+            )}
           </div>
 
           {/* Details */}

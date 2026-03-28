@@ -18,6 +18,8 @@ export default function RoomDetails() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { current: room, loading } = useSelector((s) => s.rooms);
+  const { user: authUser } = useSelector((s) => s.auth);
+  const isOwn = authUser?._id && room?.postedBy?._id && authUser._id === room.postedBy._id;
 
   useEffect(() => {
     dispatch(fetchRoomById(id));
@@ -146,7 +148,8 @@ export default function RoomDetails() {
                     </div>
                   </div>
                 )}
-                <ContactButtons userId={room.postedBy?._id} phone={room.contactPhone} phoneVisibility={room.phoneVisibility} listingType="room" listingId={room._id} size="lg" className="mb-2" />
+                {!isOwn && <ContactButtons userId={room.postedBy?._id} listingType="room" listingId={room._id} size="lg" className="mb-2" />}
+                {isOwn && <p className="text-xs text-muted text-center bg-surface rounded-xl py-2">This is your listing</p>}
               </div>
 
               {/* Safety card */}

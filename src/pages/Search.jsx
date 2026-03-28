@@ -120,7 +120,7 @@ function FlatmateCard({ user: u, match }) {
             <div className="flex-1 py-2 rounded-lg text-xs font-semibold text-center text-primary bg-primary/5 group-hover:bg-primary group-hover:text-white transition-all">
               View Details
             </div>
-            <ContactButtons userId={u.createdById || u._id} phone={u.contactPhone || u.phone} phoneVisibility={u.phoneVisibility} listingType="requirement" listingId={u.reqId} />
+            <ContactButtons userId={u.createdById || u._id} listingType="requirement" listingId={u.reqId} />
           </div>
         </div>
       </motion.div>
@@ -172,7 +172,7 @@ function PGCard({ pg, match }) {
             <div className="flex-1 py-2 rounded-lg text-xs font-semibold text-center text-primary bg-primary/5 group-hover:bg-primary group-hover:text-white transition-all">
               View Details
             </div>
-            <ContactButtons userId={pg.postedBy?._id || pg.postedBy} phone={pg.contactPhone} phoneVisibility={pg.phoneVisibility} listingType="pg" listingId={pg._id} />
+            <ContactButtons userId={pg.postedBy?._id || pg.postedBy} listingType="pg" listingId={pg._id} />
           </div>
         </div>
       </motion.div>

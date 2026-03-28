@@ -30,6 +30,18 @@ body {
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
+/* Chat — thin invisible scrollbar, shows on hover */
+.chat-scroll { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.chat-scroll:hover { scrollbar-color: rgba(0,0,0,0.1) transparent; }
+.chat-scroll::-webkit-scrollbar { width: 4px; }
+.chat-scroll::-webkit-scrollbar-track { background: transparent; }
+.chat-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+.chat-scroll:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); }
+
+/* Hide scrollbar completely */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* ── Premium animations ── */
 
 @keyframes float {

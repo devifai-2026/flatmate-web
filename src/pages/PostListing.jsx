@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import MainLayout from '../layouts/MainLayout';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
+import CityAutocomplete from '../components/ui/CityAutocomplete';
+import ImageUpload from '../components/ui/ImageUpload';
 import { createRoom } from '../redux/slices/roomSlice';
 import { createRequirement } from '../redux/slices/requirementSlice';
 
@@ -17,8 +19,10 @@ export default function PostListing() {
 
   // Room form
   const [room, setRoom] = useState({ title: '', description: '', location: '', rent: '', deposit: '', amenities: '', availableFrom: '', preferredTenant: 'any', phoneVisibility: 'masked' });
+  const [roomImages, setRoomImages] = useState([]);
   // Requirement form
   const [req, setReq] = useState({ type: 'room', title: '', description: '', budgetMin: '', budgetMax: '', location: '', moveInDate: '', notes: '', gender: 'any', smoking: false, drinking: false, pets: false, sleepSchedule: 'flexible' });
+  const [reqImages, setReqImages] = useState([]);
 
   const handleRoomSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +31,7 @@ export default function PostListing() {
       rent: Number(room.rent),
       deposit: Number(room.deposit) || 0,
       amenities: room.amenities ? room.amenities.split(',').map((a) => a.trim()).filter(Boolean) : [],
+      images: roomImages,
     };
     try {
       await dispatch(createRoom(data)).unwrap();
@@ -47,6 +52,7 @@ export default function PostListing() {
       notes: req.notes,
       preferredRoommate: { gender: req.gender },
       lifestyle: { smoking: req.smoking, drinking: req.drinking, pets: req.pets, sleepSchedule: req.sleepSchedule },
+      images: reqImages,
     };
     try {
       await dispatch(createRequirement(data)).unwrap();
@@ -81,7 +87,16 @@ export default function PostListing() {
                 <label className="text-sm font-medium text-dark">Description</label>
                 <textarea rows={3} value={room.description} onChange={(e) => setRoom({ ...room, description: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark placeholder-muted/60 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Describe the room..." required />
               </div>
-              <Input label="Location" placeholder="Andheri West, Mumbai" value={room.location} onChange={(e) => setRoom({ ...room, location: e.target.value })} required />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-dark">Location</label>
+                <CityAutocomplete
+                  value={room.location}
+                  onChange={(city) => setRoom({ ...room, location: city })}
+                  types="address,poi,neighborhood,locality,place"
+                  placeholder="Search full address or area"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark placeholder-muted/60 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Rent (₹)" type="number" placeholder="12000" value={room.rent} onChange={(e) => setRoom({ ...room, rent: e.target.value })} required />
                 <Input label="Deposit (₹)" type="number" placeholder="24000" value={room.deposit} onChange={(e) => setRoom({ ...room, deposit: e.target.value })} />
@@ -99,6 +114,10 @@ export default function PostListing() {
                   <option value="working-professionals">Working Professionals</option>
                 </select>
               </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-dark">Photos</label>
+                <ImageUpload value={roomImages} onChange={setRoomImages} multiple />
+              </div>
               <Button type="submit" size="lg" className="w-full">Post Room</Button>
             </form>
           ) : (
@@ -115,7 +134,16 @@ export default function PostListing() {
                 <label className="text-sm font-medium text-dark">Description</label>
                 <textarea rows={3} value={req.description} onChange={(e) => setReq({ ...req, description: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Describe what you need..." />
               </div>
-              <Input label="Location" placeholder="Koramangala, Bangalore" value={req.location} onChange={(e) => setReq({ ...req, location: e.target.value })} required />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-dark">Location</label>
+                <CityAutocomplete
+                  value={req.location}
+                  onChange={(city) => setReq({ ...req, location: city })}
+                  types="address,poi,neighborhood,locality,place"
+                  placeholder="Search full address or area"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark placeholder-muted/60 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Budget Min (₹)" type="number" placeholder="5000" value={req.budgetMin} onChange={(e) => setReq({ ...req, budgetMin: e.target.value })} required />
                 <Input label="Budget Max (₹)" type="number" placeholder="15000" value={req.budgetMax} onChange={(e) => setReq({ ...req, budgetMax: e.target.value })} required />
@@ -124,6 +152,10 @@ export default function PostListing() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-dark">Additional Notes</label>
                 <textarea rows={2} value={req.notes} onChange={(e) => setReq({ ...req, notes: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20" placeholder="WFH, need good wifi..." />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-dark">Photos</label>
+                <ImageUpload value={reqImages} onChange={setReqImages} multiple />
               </div>
               <Button type="submit" size="lg" className="w-full">Post Requirement</Button>
             </form>

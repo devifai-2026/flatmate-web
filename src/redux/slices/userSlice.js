@@ -1,10 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../services/api';
+import { updateUser } from './authSlice';
 
-export const fetchProfile = createAsyncThunk('user/fetchProfile', async (_, { rejectWithValue }) => {
+export const fetchProfile = createAsyncThunk('user/fetchProfile', async (_, { dispatch, rejectWithValue }) => {
   try {
     const res = await api.get('/users/me');
-    return res.data.data;
+    const data = res.data.data;
+    dispatch(updateUser(data));
+    return data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || 'Failed to fetch profile');
   }

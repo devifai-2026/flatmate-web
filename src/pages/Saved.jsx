@@ -54,7 +54,7 @@ function SavedItemCard({ item, onRemove }) {
           <Link to={detailUrl} className="flex-1">
             <button className="w-full py-1.5 rounded-lg text-[11px] font-semibold text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all cursor-pointer">View Details</button>
           </Link>
-          <ContactButtons userId={ownerId} phone={ownerPhone} phoneVisibility={data.phoneVisibility} listingType={itemType} listingId={data._id} />
+          <ContactButtons userId={ownerId} listingType={itemType} listingId={data._id} />
           <button onClick={() => onRemove(itemType, data._id || item.itemId)}
             className="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center hover:bg-red-100 cursor-pointer transition-colors" title="Remove">
             <Trash2 size={12} className="text-red-400" />

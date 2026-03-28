@@ -51,6 +51,10 @@ const authSlice = createSlice({
     resetOtpState(state) {
       state.otpSent = false;
     },
+    updateUser(state, action) {
+      state.user = { ...state.user, ...action.payload };
+      localStorage.setItem('user', JSON.stringify(state.user));
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -80,5 +84,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError, resetOtpState } = authSlice.actions;
+export const { logout, clearError, resetOtpState, updateUser } = authSlice.actions;
 export default authSlice.reducer;
