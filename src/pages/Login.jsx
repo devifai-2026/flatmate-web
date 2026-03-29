@@ -205,28 +205,6 @@ export default function Login() {
                     Continue <ArrowRight size={18} />
                   </Button>
                 </form>
-                {/* Demo accounts */}
-                <div className="mt-5 bg-primary/5 rounded-xl p-3 border border-primary/10">
-                  <p className="text-[10px] font-semibold text-primary mb-2">Demo Accounts — OTP: 1234</p>
-                  <div className="space-y-1 max-h-44 overflow-y-auto">
-                    {[
-                      { label: 'Arjun (Lister)', phone: '9876543210', city: 'Mumbai' },
-                      { label: 'Kavitha (PG Owner)', phone: '9876543211', city: 'Bangalore' },
-                      { label: 'Rohit (Lister)', phone: '9876543212', city: 'Delhi' },
-                      { label: 'Priya (Seeker)', phone: '9123456789', city: 'Bangalore' },
-                      { label: 'Rahul (Seeker)', phone: '9123456790', city: 'Mumbai' },
-                      { label: 'Sneha (Seeker)', phone: '9123456791', city: 'Bangalore' },
-                      { label: 'Amit (Seeker)', phone: '9123456792', city: 'Delhi' },
-                      { label: 'Nisha (Seeker)', phone: '9123456793', city: 'Mumbai' },
-                    ].map((a) => (
-                      <button key={a.phone} onClick={() => setPhone(a.phone)}
-                        className="w-full flex items-center justify-between text-[11px] text-dark bg-white rounded-lg px-2.5 py-1.5 hover:shadow-sm transition-all cursor-pointer border border-dark/5">
-                        <span className="font-medium">{a.label}</span>
-                        <span className="font-mono text-muted text-[10px]">{a.phone} · {a.city}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 <p className="text-center text-[11px] text-muted mt-4 leading-relaxed">
                   By continuing, you agree to our <a href="#" className="text-dark font-medium">Terms</a> & <a href="#" className="text-dark font-medium">Privacy Policy</a>

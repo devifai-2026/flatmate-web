@@ -23,42 +23,39 @@ function calcMatch(item, prefs, userCity, type) {
   if (!prefs) return null;
   let score = 0, factors = 0;
 
-  // Budget match (40 pts)
+  // Budget match (50 pts)
   const budgetMin = prefs.budgetMin || 0;
   const budgetMax = prefs.budgetMax || Infinity;
   const rent = type === 'roommate' ? (item.budget?.max || 0) : (item.rent || 0);
   if (budgetMin || budgetMax < Infinity) {
-    factors += 40;
-    if (rent >= budgetMin && rent <= budgetMax) score += 40;
+    factors += 50;
+    if (rent >= budgetMin && rent <= budgetMax) score += 50;
     else {
       const range = budgetMax - budgetMin || 10000;
       const diff = rent < budgetMin ? budgetMin - rent : rent - budgetMax;
-      score += Math.max(0, 40 - Math.round((diff / range) * 40));
+      score += Math.max(0, 50 - Math.round((diff / range) * 50));
     }
   }
 
-  // Location match (40 pts)
+  // Location match (50 pts)
   const target = (prefs.preferredLocation || userCity || '').toLowerCase();
   const loc = (item.location || item.city || '').toLowerCase();
   if (target) {
-    factors += 40;
-    if (loc.includes(target) || target.includes(loc)) score += 40;
+    factors += 50;
+    if (loc.includes(target) || target.includes(loc)) score += 50;
   }
 
-  // Gender match (20 pts) — for roommates and PGs
+  // Gender match (bonus 10 pts for roommates and PGs — doesn't reduce score)
   if (type === 'roommate' && prefs.roommatePreferences?.gender) {
-    factors += 20;
     const prefG = prefs.roommatePreferences.gender;
     const itemG = item.preferredGender || 'any';
-    if (prefG === 'any' || itemG === 'any' || prefG === itemG) score += 20;
+    if (prefG === 'any' || itemG === 'any' || prefG === itemG) score += 10;
+    factors += 10;
   }
   if (type === 'pg' && item.gender) {
-    factors += 20;
-    if (item.gender === 'unisex') score += 20;
-    else {
-      const userGender = prefs._userGender;
-      if (!userGender || item.gender === userGender) score += 20;
-    }
+    const userGender = prefs._userGender;
+    if (item.gender === 'unisex' || !userGender || item.gender === userGender) score += 10;
+    factors += 10;
   }
 
   if (factors === 0) return null;
@@ -80,6 +77,8 @@ function MatchBadge({ pct }) {
 // ── Roommate card ──
 function FlatmateCard({ user: u, match }) {
   const avatar = getAvatar(u._id, u.profileImage);
+  const { user: authUser } = useSelector((s) => s.auth);
+  const isOwn = authUser && (u.createdById === authUser._id || u._id === authUser._id);
   return (
     <Link to={`/roommates/${u.reqId || u._id}`}>
       <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} whileHover={{ y: -3 }}
@@ -87,7 +86,10 @@ function FlatmateCard({ user: u, match }) {
         <div className="relative h-48 overflow-hidden">
           <img src={avatar} alt={u.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-dark/70 via-dark/20 to-dark/5" />
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 left-3 right-3 flex items-start justify-between">
+            {isOwn ? (
+              <span className="bg-primary text-white text-[9px] font-bold px-2.5 py-1 rounded-lg uppercase">Your Listing</span>
+            ) : <span />}
             <div className="flex gap-1.5">
               <ShareButton url={`${window.location.origin}/roommates/${u.reqId || u._id}`} title={u.name} />
               <SaveButton itemType="requirement" itemId={u.reqId} />
@@ -100,7 +102,7 @@ function FlatmateCard({ user: u, match }) {
                 <MapPin size={10} /> {u.city || u.preferredLocation || 'India'}
               </p>
             </div>
-            <MatchBadge pct={match} />
+            {!isOwn && <MatchBadge pct={match} />}
           </div>
         </div>
         <div className="p-4 flex-1 flex flex-col">
@@ -120,7 +122,7 @@ function FlatmateCard({ user: u, match }) {
             <div className="flex-1 py-2 rounded-lg text-xs font-semibold text-center text-primary bg-primary/5 group-hover:bg-primary group-hover:text-white transition-all">
               View Details
             </div>
-            <ContactButtons userId={u.createdById || u._id} listingType="requirement" listingId={u.reqId} />
+            {!isOwn && <ContactButtons userId={u.createdById || u._id} listingType="requirement" listingId={u.reqId} />}
           </div>
         </div>
       </motion.div>
@@ -131,6 +133,9 @@ function FlatmateCard({ user: u, match }) {
 // ── PG card ──
 function PGCard({ pg, match }) {
   const image = getRoomImage(pg._id, pg.images);
+  const { user: authUser } = useSelector((s) => s.auth);
+  const ownerId = pg.postedBy?._id || pg.postedBy;
+  const isOwn = authUser && ownerId === authUser._id;
   return (
     <Link to={`/pgs/${pg._id}`}>
       <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} whileHover={{ y: -3 }}
@@ -139,8 +144,11 @@ function PGCard({ pg, match }) {
           <img src={image} alt={pg.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-dark/70 via-dark/20 to-dark/5" />
           <div className="absolute top-3 left-3 right-3 flex items-start justify-between">
-            <div className="bg-white text-dark text-sm font-extrabold px-3 py-1.5 rounded-lg shadow-md">
-              ₹{pg.rent?.toLocaleString('en-IN')}<span className="text-xs font-normal text-muted">/mo</span>
+            <div className="flex items-center gap-2">
+              <div className="bg-white text-dark text-sm font-extrabold px-3 py-1.5 rounded-lg shadow-md">
+                ₹{pg.rent?.toLocaleString('en-IN')}<span className="text-xs font-normal text-muted">/mo</span>
+              </div>
+              {isOwn && <span className="bg-primary text-white text-[9px] font-bold px-2.5 py-1 rounded-lg uppercase">Your Listing</span>}
             </div>
             <div className="flex gap-1.5">
               <ShareButton url={`${window.location.origin}/pgs/${pg._id}`} title={pg.title} />
@@ -153,7 +161,7 @@ function PGCard({ pg, match }) {
               {pg.gender && pg.gender !== 'unisex' && <span className="bg-white text-dark text-[10px] font-semibold px-2 py-1 rounded-md shadow-sm capitalize">{pg.gender}</span>}
               {pg.meals && <span className="bg-white text-dark text-[10px] font-semibold px-2 py-1 rounded-md shadow-sm">Meals</span>}
             </div>
-            <MatchBadge pct={match} />
+            {!isOwn && <MatchBadge pct={match} />}
           </div>
         </div>
         <div className="p-4 flex-1 flex flex-col">
@@ -172,7 +180,7 @@ function PGCard({ pg, match }) {
             <div className="flex-1 py-2 rounded-lg text-xs font-semibold text-center text-primary bg-primary/5 group-hover:bg-primary group-hover:text-white transition-all">
               View Details
             </div>
-            <ContactButtons userId={pg.postedBy?._id || pg.postedBy} listingType="pg" listingId={pg._id} />
+            {!isOwn && <ContactButtons userId={ownerId} listingType="pg" listingId={pg._id} />}
           </div>
         </div>
       </motion.div>

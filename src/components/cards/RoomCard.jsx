@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Sparkles, IndianRupee, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, Sparkles, ArrowRight, Home, Sofa, Car } from 'lucide-react';
 import SaveButton from '../ui/SaveButton';
 import ShareButton from '../ui/ShareButton';
 import ContactButtons from '../ui/ContactButtons';
@@ -43,80 +43,100 @@ export default function RoomCard({ room }) {
         viewport={{ once: true }}
         whileHover={{ y: -4 }}
         transition={{ duration: 0.3 }}
-        className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-primary/8 transition-all duration-300 group cursor-pointer h-full flex flex-col"
+        className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer h-full flex flex-col"
       >
         {/* Image */}
-        <div className="relative h-52 overflow-hidden">
-          <img src={image} alt={room.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" loading="lazy" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+        <div className="relative h-44 overflow-hidden">
+          <img src={image} alt={room.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
-          {/* Top row */}
-          <div className="absolute top-3 left-3 right-3 flex items-start justify-between">
-            {isOwn ? (
-              <span className="bg-primary text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg tracking-wide uppercase">Your Listing</span>
-            ) : match ? (
-              <div className="bg-white/95 backdrop-blur-sm text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
-                <Sparkles size={12} className="text-primary" />
+          {/* Top: match badge + actions */}
+          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-start justify-between">
+            {match ? (
+              <div className="bg-white/95 backdrop-blur-sm text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                <Sparkles size={10} className="text-primary" />
                 <span className="text-primary">{match}%</span>
-                <span className="text-muted/70 font-medium">match</span>
               </div>
+            ) : isOwn ? (
+              <span className="bg-primary text-white text-[9px] font-bold px-2.5 py-1 rounded-lg uppercase">Your Listing</span>
             ) : <span />}
-            <div className="flex gap-1.5">
+            <div className="flex gap-1">
               <ShareButton url={`${window.location.origin}/rooms/${room._id}`} title={room.title} />
               <SaveButton itemType="room" itemId={room._id} />
             </div>
           </div>
 
-          {/* Bottom row: price + tenant badge */}
-          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-            <div className="bg-white/95 backdrop-blur-sm text-dark px-3.5 py-2 rounded-xl shadow-lg flex items-center gap-0.5">
-              <IndianRupee size={14} className="text-dark" strokeWidth={2.5} />
-              <span className="text-lg font-extrabold tracking-tight">{room.rent?.toLocaleString('en-IN')}</span>
-              <span className="text-[10px] text-muted font-medium ml-0.5">/mo</span>
+          {/* Bottom: room type badge */}
+          {room.roomType && (
+            <div className="absolute bottom-2.5 left-2.5">
+              <span className="bg-white/95 backdrop-blur-sm text-dark text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase shadow-sm">{room.roomType.replace(/-/g, ' ')}</span>
             </div>
-            {room.preferredTenant && room.preferredTenant !== 'any' && (
-              <span className="bg-white/90 backdrop-blur-sm text-dark text-[10px] font-bold px-2.5 py-1.5 rounded-lg capitalize tracking-wide">{room.preferredTenant}</span>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Content */}
-        <div className="p-4 flex-1 flex flex-col gap-3">
-          <div>
-            <h3 className="font-bold text-dark text-[15px] leading-snug line-clamp-1 group-hover:text-primary transition-colors">{room.title}</h3>
-            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2">
-              <div className="flex items-center gap-1.5 text-xs text-muted">
-                <div className="w-5 h-5 rounded-md bg-primary/8 flex items-center justify-center flex-shrink-0">
-                  <MapPin size={11} className="text-primary" />
-                </div>
-                <span className="truncate max-w-[160px]">{room.location}</span>
-              </div>
-              {room.availableFrom && (
-                <div className="flex items-center gap-1.5 text-xs text-muted">
-                  <div className="w-5 h-5 rounded-md bg-primary/8 flex items-center justify-center flex-shrink-0">
-                    <Calendar size={11} className="text-primary" />
-                  </div>
-                  <span>{new Date(room.availableFrom).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</span>
-                </div>
-              )}
+        <div className="p-4 flex-1 flex flex-col">
+          {/* Price */}
+          <div className="flex items-baseline gap-1 mb-1.5">
+            <span className="text-xl font-extrabold text-primary">₹{room.rent?.toLocaleString('en-IN')}</span>
+            <span className="text-xs text-muted">/mo</span>
+            {room.deposit > 0 && <span className="text-[10px] text-muted ml-auto">Deposit ₹{room.deposit?.toLocaleString('en-IN')}</span>}
+          </div>
+
+          {/* Title */}
+          <h3 className="font-bold text-dark text-sm leading-snug line-clamp-1 mb-2 group-hover:text-primary transition-colors">{room.title}</h3>
+
+          {/* Location + Date */}
+          <div className="flex items-center gap-3 mb-2.5">
+            <div className="flex items-center gap-1 text-[11px] text-muted min-w-0">
+              <MapPin size={11} className="text-primary flex-shrink-0" />
+              <span className="truncate">{room.location}</span>
             </div>
+            {room.availableFrom && (
+              <div className="flex items-center gap-1 text-[11px] text-muted flex-shrink-0">
+                <Calendar size={11} className="text-primary" />
+                <span>{new Date(room.availableFrom).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Property tags */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {room.furnishing && (
+              <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[9px] font-semibold px-2 py-1 rounded-md">
+                <Sofa size={9} /> {room.furnishing.replace(/-/g, ' ')}
+              </span>
+            )}
+            {room.preferredTenant && room.preferredTenant !== 'any' && (
+              <span className="bg-violet-50 text-violet-700 text-[9px] font-semibold px-2 py-1 rounded-md capitalize">{room.preferredTenant.replace(/-/g, ' ')}</span>
+            )}
+            {room.parking && room.parking !== 'none' && (
+              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] font-semibold px-2 py-1 rounded-md">
+                <Car size={9} /> {room.parking}
+              </span>
+            )}
+            {room.bathrooms && (
+              <span className="bg-blue-50 text-blue-700 text-[9px] font-semibold px-2 py-1 rounded-md">{room.bathrooms} bath</span>
+            )}
+            {room.totalArea && (
+              <span className="bg-gray-50 text-gray-600 text-[9px] font-semibold px-2 py-1 rounded-md">{room.totalArea} sqft</span>
+            )}
           </div>
 
           {/* Amenities */}
           {room.amenities?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {room.amenities.slice(0, 4).map((a) => (
-                <span key={a} className="bg-gray-50 text-muted text-[10px] font-semibold px-2.5 py-1 rounded-lg capitalize border border-gray-100">{a}</span>
+            <div className="flex flex-wrap gap-1 mb-3">
+              {room.amenities.slice(0, 3).map((a) => (
+                <span key={a} className="bg-gray-50 text-muted text-[9px] font-medium px-2 py-0.5 rounded capitalize">{a.replace(/-/g, ' ')}</span>
               ))}
-              {room.amenities.length > 4 && <span className="bg-primary/5 text-primary text-[10px] font-bold px-2.5 py-1 rounded-lg border border-primary/10">+{room.amenities.length - 4}</span>}
+              {room.amenities.length > 3 && <span className="text-primary text-[9px] font-semibold px-1">+{room.amenities.length - 3}</span>}
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2 mt-auto pt-3 border-t border-gray-100">
-            <div className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center transition-all duration-300 flex items-center justify-center gap-1.5 bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white group-hover:shadow-lg group-hover:shadow-primary/20">
-              {isOwn ? 'Manage Listing' : 'View Details'}
-              <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+          <div className="flex items-center gap-2 mt-auto pt-3 border-t border-gray-50">
+            <div className="flex-1 py-2 rounded-xl text-xs font-bold text-center bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition-all flex items-center justify-center gap-1">
+              View Details <ArrowRight size={12} />
             </div>
             {!isOwn && <ContactButtons userId={ownerId} listingType="room" listingId={room._id} />}
           </div>

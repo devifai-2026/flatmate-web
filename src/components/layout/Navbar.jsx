@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, MessageCircle, User, LogOut, Plus, LayoutDashboard, Bell, Users, Heart, Sparkles, Wallet, Coins, ClipboardList } from 'lucide-react';
+import { Menu, X, MessageCircle, User, LogOut, Plus, LayoutDashboard, Bell, Users, Heart, Sparkles, Wallet, Coins, ClipboardList, HelpCircle } from 'lucide-react';
 import { logout } from '../../redux/slices/authSlice';
 import Button from '../ui/Button';
 import api from '../../services/api';
@@ -167,6 +167,9 @@ export default function Navbar() {
                           </Link>
                           <Link to="/saved" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted hover:bg-surface transition-colors">
                             <Heart size={16} /> Saved
+                          </Link>
+                          <Link to="/support" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted hover:bg-surface transition-colors">
+                            <HelpCircle size={16} /> Help & Support
                           </Link>
                           <div className="border-t border-gray-50 mt-1 pt-1">
                             <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer">

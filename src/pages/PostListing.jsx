@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Home, FileText, Building2 } from 'lucide-react';
@@ -17,9 +17,15 @@ import { LIFESTYLE_TAGS } from '../utils/constants';
 const AMENITIES = ['wifi', 'ac', 'parking', 'laundry', 'kitchen', 'gym', 'power-backup', 'water-supply', 'security', 'cctv', 'lift', 'fridge', 'geyser', 'tv', 'wardrobe', 'attached-bathroom'];
 
 export default function PostListing() {
-  const [tab, setTab] = useState('room');
+  const [searchParams] = useSearchParams();
+  const editType = searchParams.get('edit'); // 'room' | 'pg' | 'requirement'
+  const editId = searchParams.get('id');
+  const isEditing = !!(editType && editId);
+
+  const [tab, setTab] = useState(editType || 'room');
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [editLoading, setEditLoading] = useState(false);
 
   // Room form
   const [room, setRoom] = useState({ title: '', description: '', location: '', rent: '', deposit: '', availableFrom: '', preferredTenant: 'any', roomType: '', furnishing: '', bathrooms: '', floor: '', totalArea: '', parking: 'none' });
@@ -43,6 +49,54 @@ export default function PostListing() {
   const [reqImages, setReqImages] = useState([]);
   const [reqTags, setReqTags] = useState([]);
 
+  // Fetch existing data when editing
+  useEffect(() => {
+    if (!isEditing) return;
+    setEditLoading(true);
+    const endpoint = editType === 'room' ? `/rooms/${editId}` : editType === 'pg' ? `/pgs/${editId}` : `/requirements/${editId}`;
+    api.get(endpoint)
+      .then(({ data: res }) => {
+        const d = res.data;
+        if (editType === 'room') {
+          setRoom({
+            title: d.title || '', description: d.description || '', location: d.location || '',
+            rent: d.rent || '', deposit: d.deposit || '', availableFrom: d.availableFrom ? d.availableFrom.slice(0, 10) : '',
+            preferredTenant: d.preferredTenant || 'any', roomType: d.roomType || '', furnishing: d.furnishing || '',
+            bathrooms: d.bathrooms || '', floor: d.floor || '', totalArea: d.totalArea || '', parking: d.parking || 'none',
+          });
+          setRoomAmenities(d.amenities || []);
+          setRoomImages(d.images || []);
+        } else if (editType === 'pg') {
+          setPg({
+            title: d.title || '', description: d.description || '', location: d.location || '', city: d.city || '',
+            rent: d.rent || '', deposit: d.deposit || '', sharing: d.sharing || 'any', gender: d.gender || 'unisex',
+            meals: d.meals || false, mealType: d.mealType || '',
+          });
+          setPgAmenities(d.amenities || []);
+          setPgImages(d.images || []);
+        } else if (editType === 'requirement') {
+          setReq({
+            title: d.title || '', description: d.description || '',
+            budgetMin: d.budget?.min || '', budgetMax: d.budget?.max || '',
+            location: d.location || '', moveInDate: d.moveInDate ? d.moveInDate.slice(0, 10) : '', notes: d.notes || '',
+            gender: d.gender || '', age: d.age || '', occupation: d.occupation || '',
+            religion: d.religion || 'no-preference', foodPreference: d.foodPreference || 'no-preference',
+            languages: (d.languages || []).join(', '), roomType: d.roomType || 'any',
+            prefGender: d.preferredRoommate?.gender || 'any',
+            prefAgeMin: d.preferredRoommate?.ageMin || '', prefAgeMax: d.preferredRoommate?.ageMax || '',
+            prefReligion: d.preferredRoommate?.religion || '', prefFood: d.preferredRoommate?.foodPreference || '',
+            smoking: d.lifestyle?.smoking || false, drinking: d.lifestyle?.drinking || false, pets: d.lifestyle?.pets || false,
+            sleepSchedule: d.lifestyle?.sleepSchedule || 'flexible', cleanliness: d.lifestyle?.cleanliness || 'moderate',
+            guests: d.lifestyle?.guests || 'sometimes',
+          });
+          setReqImages(d.images || []);
+          setReqTags(d.lifestyleTags || []);
+        }
+      })
+      .catch(() => toast.error('Failed to load listing data'))
+      .finally(() => setEditLoading(false));
+  }, [editType, editId, isEditing]);
+
   const handleRoomSubmit = async (e) => {
     e.preventDefault();
     const data = {
@@ -52,10 +106,16 @@ export default function PostListing() {
       images: roomImages,
     };
     try {
-      await dispatch(createRoom(data)).unwrap();
-      toast.success('Room posted successfully!');
-      navigate('/search');
-    } catch (err) { toast.error(err); }
+      if (isEditing) {
+        await api.put(`/rooms/${editId}`, data);
+        toast.success('Room updated!');
+        navigate('/my-listings');
+      } else {
+        await dispatch(createRoom(data)).unwrap();
+        toast.success('Room posted successfully!');
+        navigate('/search');
+      }
+    } catch (err) { toast.error(err?.response?.data?.message || err || 'Failed'); }
   };
 
   const handlePgSubmit = async (e) => {
@@ -66,16 +126,23 @@ export default function PostListing() {
     if (!pg.city) return toast.error('Enter city');
     setPgSubmitting(true);
     try {
-      await api.post('/pgs', {
+      const pgData = {
         title: pg.title, description: pg.description, location: pg.location, city: pg.city,
         rent: Number(pg.rent), deposit: Number(pg.deposit) || 0,
         sharing: pg.sharing, gender: pg.gender,
         meals: pg.meals, mealType: pg.meals ? pg.mealType : undefined,
         amenities: pgAmenities, images: pgImages,
-      });
-      toast.success('PG posted successfully!');
-      navigate('/search?tab=pgs');
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to post'); }
+      };
+      if (isEditing) {
+        await api.put(`/pgs/${editId}`, pgData);
+        toast.success('PG updated!');
+        navigate('/my-listings');
+      } else {
+        await api.post('/pgs', pgData);
+        toast.success('PG posted successfully!');
+        navigate('/search?tab=pgs');
+      }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     setPgSubmitting(false);
   };
 
@@ -100,10 +167,16 @@ export default function PostListing() {
       images: reqImages,
     };
     try {
-      await dispatch(createRequirement(data)).unwrap();
-      toast.success('Flatmate profile posted!');
-      navigate('/search?tab=roommates');
-    } catch (err) { toast.error(err); }
+      if (isEditing) {
+        await api.put(`/requirements/${editId}`, data);
+        toast.success('Profile updated!');
+        navigate('/my-listings');
+      } else {
+        await dispatch(createRequirement(data)).unwrap();
+        toast.success('Flatmate profile posted!');
+        navigate('/search?tab=roommates');
+      }
+    } catch (err) { toast.error(err?.response?.data?.message || err || 'Failed'); }
   };
 
   const tabs = [
@@ -115,17 +188,25 @@ export default function PostListing() {
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="text-2xl font-bold text-dark mb-6">Create a Listing</h1>
+        <h1 className="text-2xl font-bold text-dark mb-6">{isEditing ? 'Edit Listing' : 'Create a Listing'}</h1>
 
-        <div className="flex gap-2 mb-6">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${tab === t.id ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'bg-white text-muted hover:bg-gray-50 border border-gray-100'}`}>
-              <t.icon size={16} /> {t.label}
-            </button>
-          ))}
-        </div>
+        {!isEditing && (
+          <div className="flex gap-2 mb-6">
+            {tabs.map((t) => (
+              <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${tab === t.id ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'bg-white text-muted hover:bg-gray-50 border border-gray-100'}`}>
+                <t.icon size={16} /> {t.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <motion.div key={tab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        {editLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+        ) : null}
+
+        <motion.div key={tab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className={`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 ${editLoading ? 'hidden' : ''}`}>
 
           {/* ═══ ROOM ═══ */}
           {tab === 'room' && (
@@ -222,7 +303,7 @@ export default function PostListing() {
                 <label className="text-sm font-medium text-dark">Photos</label>
                 <ImageUpload value={roomImages} onChange={setRoomImages} multiple />
               </div>
-              <Button type="submit" size="lg" className="w-full">Post Room</Button>
+              <Button type="submit" size="lg" className="w-full">{isEditing ? 'Update Room' : 'Post Room'}</Button>
             </form>
           )}
 
@@ -319,7 +400,7 @@ export default function PostListing() {
                 <ImageUpload value={pgImages} onChange={setPgImages} multiple />
               </div>
 
-              <Button type="submit" size="lg" className="w-full" loading={pgSubmitting}>Post PG</Button>
+              <Button type="submit" size="lg" className="w-full" loading={pgSubmitting}>{isEditing ? 'Update PG' : 'Post PG'}</Button>
             </form>
           )}
 
@@ -496,7 +577,7 @@ export default function PostListing() {
                 <label className="text-sm font-medium text-dark">Photos (max 3)</label>
                 <ImageUpload value={reqImages} onChange={setReqImages} multiple max={3} />
               </div>
-              <Button type="submit" size="lg" className="w-full">Post Flatmate Profile</Button>
+              <Button type="submit" size="lg" className="w-full">{isEditing ? 'Update Profile' : 'Post Flatmate Profile'}</Button>
             </form>
           )}
         </motion.div>

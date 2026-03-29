@@ -1,10 +1,11 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { lazy, Suspense, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import ProtectedRoute from './components/ui/ProtectedRoute'
 import { fetchSavedIds } from './redux/slices/wishlistSlice'
 import { fetchProfile } from './redux/slices/userSlice'
 import { fetchBalance, fetchUnlockedIds } from './redux/slices/walletSlice'
+import { trackPageView } from './services/guestTracker'
 
 const Landing = lazy(() => import('./pages/Landing'))
 const Login = lazy(() => import('./pages/Login'))
@@ -25,6 +26,8 @@ const Preferences = lazy(() => import('./pages/Preferences'))
 const Wallet = lazy(() => import('./pages/Wallet'))
 const ManageListings = lazy(() => import('./pages/ManageListings'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
+const Support = lazy(() => import('./pages/Support'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 function PageLoader() {
   return (
@@ -40,6 +43,8 @@ function PageLoader() {
 export default function App() {
   const { token } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
+  const location = useLocation();
+
   useEffect(() => {
     if (token) {
       dispatch(fetchSavedIds());
@@ -48,6 +53,13 @@ export default function App() {
       dispatch(fetchUnlockedIds());
     }
   }, [token, dispatch]);
+
+  // Track guest page views
+  useEffect(() => {
+    if (!token) {
+      trackPageView(location.pathname);
+    }
+  }, [location.pathname, token]);
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
@@ -71,6 +83,8 @@ export default function App() {
         <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
         <Route path="/my-listings" element={<ProtectedRoute><ManageListings /></ProtectedRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+        <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   )
