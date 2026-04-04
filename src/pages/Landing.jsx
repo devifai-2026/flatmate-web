@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useInView, useMotionValue, useTransform, anima
 import MarqueeModule from 'react-fast-marquee';
 const Marquee = MarqueeModule.default || MarqueeModule;
 import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
 import Button from '../components/ui/Button';
 import { CITY_IMAGES, CITY_GRADIENTS, PLATFORM_STATS, GLOBAL_COUNTRIES } from '../utils/constants';
 
@@ -77,8 +78,96 @@ export default function Landing() {
   const [cityTab, setCityTab] = useState('Cities');
   const propertyGridRef = useRef(null);
   const offerScrollRef = useRef(null);
+  const testimonialScrollRef = useRef(null);
+  const searchContainerRef = useRef(null);
+
   const [canScrollLeftOffers, setCanScrollLeftOffers] = useState(false);
+  const [canScrollLeftProperties, setCanScrollLeftProperties] = useState(false);
+  const [canScrollRightProperties, setCanScrollRightProperties] = useState(true);
+  const [canScrollLeftTestimonials, setCanScrollLeftTestimonials] = useState(false);
+  const [canScrollRightTestimonials, setCanScrollRightTestimonials] = useState(true);
+  
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [searchTab, setSearchTab] = useState('ALL');
   const [showAppModal, setShowAppModal] = useState(false);
+
+  const searchData = {
+    'ALL': {
+      cities: ['London', 'Dublin', 'Melbourne', 'Toronto', 'Manchester', 'Birmingham', 'Sydney', 'Chicago', 'Cork', 'Nottingham', 'Berlin', 'Madrid', 'Mumbai', 'Delhi'],
+      universities: [
+        { name: 'University College London', city: 'London' },
+        { name: 'University of Birmingham', city: 'Birmingham' },
+        { name: 'University of Manchester', city: 'Manchester' },
+        { name: 'Trinity College', city: 'Dublin' },
+        { name: 'Coventry University', city: 'Coventry' }
+      ]
+    },
+    'UK': {
+       cities: ['London', 'Manchester', 'Birmingham', 'Glasgow', 'Liverpool', 'Coventry', 'Nottingham', 'Bristol', 'Leeds', 'Sheffield'],
+       universities: [
+         { name: 'University College London', city: 'London' },
+         { name: 'University of Manchester', city: 'Manchester' },
+         { name: 'University of Birmingham', city: 'Birmingham' },
+         { name: 'Coventry University', city: 'Coventry' },
+         { name: 'King\'s College London', city: 'London' }
+       ]
+    },
+    'IRE': {
+      cities: ['Dublin', 'Cork', 'Galway', 'Limerick', 'Waterford'],
+      universities: [
+        { name: 'Trinity College Dublin', city: 'Dublin' },
+        { name: 'University College Dublin', city: 'Dublin' },
+        { name: 'University College Cork', city: 'Cork' }
+      ]
+    },
+    'AUS': {
+      cities: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Canberra'],
+      universities: [
+        { name: 'University of Sydney', city: 'Sydney' },
+        { name: 'University of Melbourne', city: 'Melbourne' },
+        { name: 'UNSW Sydney', city: 'Sydney' }
+      ]
+    },
+    'CAN': {
+      cities: ['Toronto', 'Vancouver', 'Montreal', 'Ottawa', 'Calgary'],
+      universities: [
+        { name: 'University of Toronto', city: 'Toronto' },
+        { name: 'University of British Columbia', city: 'Vancouver' },
+        { name: 'McGill University', city: 'Montreal' }
+      ]
+    },
+    'USA': {
+      cities: ['New York', 'Los Angeles', 'Chicago', 'Boston', 'San Francisco'],
+      universities: [
+        { name: 'Columbia University', city: 'New York' },
+        { name: 'University of Chicago', city: 'Chicago' },
+        { name: 'NYU', city: 'New York' }
+      ]
+    },
+    'GER': {
+      cities: ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne'],
+      universities: [
+        { name: 'Technical University of Munich', city: 'Munich' },
+        { name: 'Humboldt University', city: 'Berlin' }
+      ]
+    },
+    'ESP': {
+      cities: ['Madrid', 'Barcelona', 'Valencia', 'Seville'],
+      universities: [
+        { name: 'University of Barcelona', city: 'Barcelona' },
+        { name: 'Complutense University of Madrid', city: 'Madrid' }
+      ]
+    },
+    'IND': {
+      cities: ['mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad', 'Chennai'],
+      universities: [
+        { name: 'Indian Institute of Technology', city: 'Mumbai' },
+        { name: 'Delhi University', city: 'Delhi' }
+      ]
+    }
+  };
+
+  const currentSearchData = searchData[searchTab] || searchData['ALL'];
 
   const filteredCities = useMemo(() => {
     if (!CITY_IMAGES) return [];
@@ -96,12 +185,52 @@ export default function Landing() {
     setCanScrollLeftOffers(e.target.scrollLeft > 10);
   };
 
-  useEffect(() => {
-    const scrollEl = offerScrollRef.current;
-    if (scrollEl) {
-      scrollEl.addEventListener('scroll', handleOfferScroll);
-      return () => scrollEl.removeEventListener('scroll', handleOfferScroll);
+  const handlePropertyScroll = () => {
+    if (propertyGridRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = propertyGridRef.current;
+      setCanScrollLeftProperties(scrollLeft > 10);
+      setCanScrollRightProperties(scrollLeft + clientWidth < scrollWidth - 10);
     }
+  };
+
+  const handleTestimonialScroll = () => {
+    if (testimonialScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = testimonialScrollRef.current;
+      setCanScrollLeftTestimonials(scrollLeft > 10);
+      setCanScrollRightTestimonials(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    const offerEl = offerScrollRef.current;
+    if (offerEl) offerEl.addEventListener('scroll', handleOfferScroll);
+    
+    const propertyEl = propertyGridRef.current;
+    if (propertyEl) {
+      propertyEl.addEventListener('scroll', handlePropertyScroll);
+      handlePropertyScroll();
+    }
+
+    const testimonialEl = testimonialScrollRef.current;
+    if (testimonialEl) {
+      testimonialEl.addEventListener('scroll', handleTestimonialScroll);
+      // Initial check
+      handleTestimonialScroll();
+    }
+
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      if (offerEl) offerEl.removeEventListener('scroll', handleOfferScroll);
+      if (propertyEl) propertyEl.removeEventListener('scroll', handlePropertyScroll);
+      if (testimonialEl) testimonialEl.removeEventListener('scroll', handleTestimonialScroll);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   useEffect(() => {
@@ -123,7 +252,7 @@ export default function Landing() {
       <Navbar transparent={true} />
 
       {/* ══ HERO ══ */}
-      <section className="relative h-[55vh] min-h-[450px] flex items-center justify-center overflow-hidden pt-12">
+      <section className="relative h-[55vh] min-h-[450px] flex items-center justify-center pt-12 z-20">
         <div className="absolute inset-0 z-0">
           <img 
             src="https://i.ibb.co/xqfdtPFM/pexels-thirdman-7236569.jpg" 
@@ -166,11 +295,14 @@ export default function Landing() {
 
           <motion.div 
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
-            className="w-full max-w-3xl mx-auto"
+            className="w-full max-w-3xl mx-auto relative z-[500]"
+            ref={searchContainerRef}
           >
-            <form onSubmit={handleSearch} className="relative group">
+            <form onSubmit={handleSearch} className="relative z-[520]">
               <input 
-                type="text" value={location} onChange={(e) => setLocation(e.target.value)}
+                type="text" value={location} 
+                onChange={(e) => setLocation(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
                 placeholder="Search by City, University or Property"
                 className="w-full bg-white rounded-full py-6 px-10 pr-20 text-dark placeholder-gray-400 shadow-2xl focus:outline-none focus:ring-8 focus:ring-primary/10 transition-all text-xl font-bold border-none"
               />
@@ -181,6 +313,94 @@ export default function Landing() {
                 <Search size={26} />
               </button>
             </form>
+
+            <AnimatePresence>
+              {isSearchFocused && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 10, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full left-0 right-0 bg-white rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.15)] z-[510] overflow-hidden border border-gray-100/50 backdrop-blur-3xl"
+                >
+                  {/* Tabs */}
+                  <div className="border-b border-gray-50 bg-gray-50/30 overflow-hidden relative">
+                    <motion.div 
+                      drag="x"
+                      dragConstraints={{ left: -300, right: 0 }}
+                      className="flex items-center gap-1 p-2 cursor-grab active:cursor-grabbing"
+                    >
+                      {['ALL', '🇬🇧 UK', '🇮🇪 IRE', '🇨🇦 CAN', '🇦🇺 AUS', '🇺🇸 USA', '🇩🇪 GER', '🇪🇸 ESP', '🇮🇳 IND'].map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setSearchTab(tab.includes(' ') ? tab.split(' ')[1] : tab)}
+                          className={`px-5 py-2.5 rounded-full text-[13px] font-black transition-all whitespace-nowrap
+                            ${(searchTab === tab || (tab === 'ALL' && searchTab === 'ALL')) 
+                              ? 'bg-white text-primary shadow-sm border border-primary/10' 
+                              : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                          {tab}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </div>
+
+                  <div className="p-2 space-y-1 max-h-[480px] overflow-y-auto no-scrollbar">
+                    {/* Recently Searched */}
+                    <div className="px-5 py-4">
+                      <div className="flex items-center gap-2 text-gray-400 mb-4">
+                        <Clock size={14} className="opacity-60" />
+                        <span className="text-[11px] font-black uppercase tracking-widest opacity-80">Recently Searched</span>
+                      </div>
+                      <div className="flex flex-wrap gap-4 ml-6">
+                        {['London', 'Liverpool', 'Manchester'].map(city => (
+                          <button key={city} onClick={() => { navigate(`/search?location=${encodeURIComponent(city)}`); setIsSearchFocused(false); }} className="flex items-center gap-2 text-gray-500 hover:text-primary transition-all font-bold text-sm">
+                             <Clock size={14} className="opacity-40" /> {city}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Top Cities */}
+                    <div className="px-5 py-4 bg-gray-50/50 rounded-2xl mx-2">
+                      <div className="flex items-center gap-2 text-gray-400 mb-6">
+                        <MapPin size={14} className="opacity-60 text-secondary" />
+                        <span className="text-[11px] font-black uppercase tracking-widest opacity-80">Top Cities in {searchTab === 'ALL' ? 'Global' : searchTab}</span>
+                        <Zap size={10} className="text-orange-400 fill-orange-400 animate-pulse ml-0.5" />
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-2 ml-6">
+                        {currentSearchData.cities.map(city => (
+                          <button key={city} onClick={() => { navigate(`/search?location=${encodeURIComponent(city)}`); setIsSearchFocused(false); }} className="text-left text-gray-500 hover:text-primary transition-all font-bold text-sm">
+                            {city}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Top Universities */}
+                    <div className="px-5 py-6">
+                      <div className="flex items-center gap-2 text-gray-400 mb-6">
+                        <div className="w-6 h-6 flex items-center justify-center bg-gray-50 rounded-md">
+                          <img src="https://amberstudent.com/static-assets/amber-v2/icons/amenities/university.svg" alt="Uni" className="w-3.5 h-3.5 grayscale opacity-60" />
+                        </div>
+                        <span className="text-[11px] font-black uppercase tracking-widest opacity-80">Top Universities</span>
+                        <Zap size={10} className="text-orange-400 fill-orange-400 animate-pulse ml-0.5" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6 ml-6 pb-4">
+                        {currentSearchData.universities.map((uni, idx) => (
+                          <button 
+                            key={idx} 
+                            onClick={() => { navigate(`/search?location=${encodeURIComponent(`${uni.name}, ${uni.city}`)}`); setIsSearchFocused(false); }} 
+                            className="text-left text-gray-500 hover:text-primary transition-all font-bold text-sm leading-snug"
+                          >
+                            {uni.name}, <span className="opacity-80 font-semibold">{uni.city}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
       </section>
@@ -367,7 +587,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="relative overflow-visible group/slider">
+          <div className="relative group/property-slider">
             <div 
               ref={propertyGridRef}
               className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth pb-6 snap-x snap-mandatory"
@@ -423,12 +643,39 @@ export default function Landing() {
               ))}
             </div>
 
-            <button 
-              onClick={() => propertyGridRef.current?.scrollBy({ left: 210, behavior: 'smooth' })}
-              className="absolute -right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-white rounded-xl shadow-xl flex items-center justify-center text-dark border border-gray-100 hover:text-primary transition-all z-30 hover:scale-110 active:scale-95 flex"
-            >
-              <ChevronRight size={18} />
-            </button>
+            {/* Left Blur & Arrow */}
+            <AnimatePresence>
+              {canScrollLeftProperties && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+                  className="absolute left-0 top-0 h-[calc(100%-1.5rem)] w-32 bg-gradient-to-r from-[#fbfcff] via-[#fbfcff]/80 to-transparent z-20 pointer-events-none flex items-center justify-start"
+                >
+                  <button 
+                    onClick={() => propertyGridRef.current?.scrollBy({ left: -210, behavior: 'smooth' })}
+                    className="ml-2 w-10 h-10 bg-white rounded-xl shadow-xl flex items-center justify-center text-dark border border-gray-100 hover:text-primary transition-all pointer-events-auto hover:scale-110 active:scale-95"
+                  >
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Right Blur & Arrow */}
+            <AnimatePresence>
+              {canScrollRightProperties && (
+                <motion.div 
+                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}
+                  className="absolute right-0 top-0 h-[calc(100%-1.5rem)] w-32 bg-gradient-to-l from-[#fbfcff] via-[#fbfcff]/80 to-transparent z-20 pointer-events-none flex items-center justify-end"
+                >
+                  <button 
+                    onClick={() => propertyGridRef.current?.scrollBy({ left: 210, behavior: 'smooth' })}
+                    className="mr-2 w-10 h-10 bg-white rounded-xl shadow-xl flex items-center justify-center text-dark border border-gray-100 hover:text-primary transition-all pointer-events-auto hover:scale-110 active:scale-95"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </section>
@@ -445,27 +692,70 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6">
-            {[
-              { name: "rhea ganta", text: "They makes us understand and explain every procedure which makes the booking procedure easy and smooth for us.", university: "University Of Aberdeen", flag: "🇮🇳" },
-              { name: "Aravind", text: "The agent assigned was friendly and responded to my queries quickly, even after working hours. I would genuinely recomme...", university: "University of Sheffield", flag: "🇮🇳" },
-              { name: "Ujjash Sharma", text: "Great overall experience I was helped with every problem I faced along the way by the extremely commendable staff.", university: "Leeds Beckett University", flag: "🇮🇳" },
-              { name: "Simran kaur", text: "Ample of choice and smooth paper work. nHassle free accomodation with all up to date amenities", university: "Plymouth", flag: "🇮🇳" },
-              { name: "Rahul", text: "They called me regularly and updated on the available properties keeping in mind about my priorities and demands.", university: "Tu Dublin Grangegorman", flag: "🇮🇳" }
-            ].map((t, i) => (
-              <motion.div key={i} whileHover={{ y: -5 }} className="min-w-[280px] md:min-w-[320px] bg-white rounded-2xl p-6 shadow-sm border border-green-50/50 flex flex-col gap-4">
-                <p className="text-sm text-dark font-medium leading-relaxed line-clamp-4">"{t.text}"</p>
-                <div className="mt-auto flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner group">
-                    <img src="https://i.ibb.co/r2DrjDTv/photo-1597058712635-3182d1eacc1e-w-500-auto-format-fit-crop-q-60-ixlib-rb-4-1.jpg" alt="Student Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+          <div className="relative group/testimonials">
+            <div 
+              ref={testimonialScrollRef}
+              className="flex gap-4 overflow-x-auto no-scrollbar pb-6 scroll-smooth snap-x snap-mandatory"
+            >
+              {[
+                { name: "rhea ganta", text: "They makes us understand and explain every procedure which makes the booking procedure easy and smooth for us.", university: "University Of Aberdeen", flag: "🇮🇳" },
+                { name: "Aravind", text: "The agent assigned was friendly and responded to my queries quickly, even after working hours. I would genuinely recomme...", university: "University of Sheffield", flag: "🇮🇳" },
+                { name: "Ujjash Sharma", text: "Great overall experience I was helped with every problem I faced along the way by the extremely commendable staff.", university: "Leeds Beckett University", flag: "🇮🇳" },
+                { name: "Simran kaur", text: "Ample of choice and smooth paper work. nHassle free accomodation with all up to date amenities", university: "Plymouth", flag: "🇮🇳" },
+                { name: "Rahul", text: "They called me regularly and updated on the available properties keeping in mind about my priorities and demands.", university: "Tu Dublin Grangegorman", flag: "🇮🇳" }
+              ].map((t, i) => (
+                <motion.div 
+                  key={i} 
+                  whileHover={{ y: -5 }} 
+                  className="min-w-[280px] md:min-w-[320px] bg-white rounded-2xl p-6 shadow-sm border border-green-50/50 flex flex-col gap-4 snap-start"
+                >
+                  <p className="text-sm text-dark font-medium leading-relaxed line-clamp-4">"{t.text}"</p>
+                  <div className="mt-auto flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner group">
+                      <img src="https://i.ibb.co/r2DrjDTv/photo-1597058712635-3182d1eacc1e-w-500-auto-format-fit-crop-q-60-ixlib-rb-4-1.jpg" alt="Student Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-[13px] font-black text-dark leading-tight">{t.name}</h4>
+                      <p className="text-[11px] text-gray-400 font-bold">{t.university}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-[13px] font-black text-dark leading-tight">{t.name}</h4>
-                    <p className="text-[11px] text-gray-400 font-bold">{t.university}</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Left Blur & Arrow */}
+            <AnimatePresence>
+              {canScrollLeftTestimonials && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+                  className="absolute left-0 top-0 h-[calc(100%-1.5rem)] w-32 bg-gradient-to-r from-[#E7F9EF] via-[#E7F9EF]/80 to-transparent z-20 pointer-events-none flex items-center justify-start"
+                >
+                  <button 
+                    onClick={() => testimonialScrollRef.current?.scrollBy({ left: -340, behavior: 'smooth' })}
+                    className="ml-2 w-10 h-10 bg-white rounded-full shadow-xl flex items-center justify-center text-dark border border-gray-100 hover:text-primary transition-all pointer-events-auto hover:scale-110 active:scale-95"
+                  >
+                    <ChevronRight className="rotate-180" size={20} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Right Blur & Arrow */}
+            <AnimatePresence>
+              {canScrollRightTestimonials && (
+                <motion.div 
+                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}
+                  className="absolute right-0 top-0 h-[calc(100%-1.5rem)] w-32 bg-gradient-to-l from-[#E7F9EF] via-[#E7F9EF]/80 to-transparent z-20 pointer-events-none flex items-center justify-end"
+                >
+                  <button 
+                    onClick={() => testimonialScrollRef.current?.scrollBy({ left: 340, behavior: 'smooth' })}
+                    className="mr-2 w-10 h-10 bg-white rounded-full shadow-xl flex items-center justify-center text-dark border border-gray-100 hover:text-primary transition-all pointer-events-auto hover:scale-110 active:scale-95"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </section>
@@ -763,117 +1053,8 @@ export default function Landing() {
       </section>
 
       {/* ══ COMPREHENSIVE FOOTER ══ */}
-      <footer className="bg-white border-t border-gray-100 pt-24 pb-12">
-        <div className="max-w-[90%] mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-16 mb-20">
-            {/* Brand + Trustpilot */}
-            <div className="md:col-span-4 flex flex-col gap-8">
-              <div>
-                <h2 className="text-2xl font-black text-dark mb-1 tracking-tight">amber</h2>
-                <p className="text-gray-400 text-sm font-medium">amber © 2026. All rights reserved.</p>
-              </div>
+      <Footer />
 
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Star size={18} className="fill-[#00b67a] text-[#00b67a]" />
-                  <span className="text-xl font-black text-dark">Trustpilot</span>
-                </div>
-                <div className="flex gap-1">
-                  {[1,2,3,4,5].map(i => <div key={i} className="w-9 h-9 bg-[#00b67a] rounded-sm flex items-center justify-center"><Star size={18} className="fill-white text-white" /></div>)}
-                </div>
-                <p className="text-xs font-bold text-gray-500">TrustScore <span className="text-dark">4.8 | 9,423 reviews</span></p>
-              </div>
-
-              <div className="bg-gray-50 rounded-2xl p-6 flex flex-col gap-6">
-                <div className="flex items-center gap-8">
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase mb-3">Get the app</p>
-                    <div className="flex gap-2">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Play Store" className="h-6 cursor-pointer" />
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" className="h-6 cursor-pointer" />
-                    </div>
-                  </div>
-                  <div className="w-[1px] h-12 bg-gray-200" />
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase mb-3">Payment Options</p>
-                    <div className="flex gap-4 items-center">
-                       <FaCcVisa className="text-3xl text-gray-400 hover:text-blue-600 transition-colors cursor-pointer" title="Visa" />
-                       <FaCcMastercard className="text-3xl text-gray-400 hover:text-orange-500 transition-colors cursor-pointer" title="Mastercard" />
-                       <FaCcAmex className="text-3xl text-gray-400 hover:text-blue-400 transition-colors cursor-pointer" title="American Express" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Links Columns */}
-            <div className="md:col-span-2 flex flex-col gap-6">
-              <h3 className="font-black text-dark text-sm tracking-tight">Company</h3>
-              <ul className="flex flex-col gap-3.5">
-                {['About', 'How it works', 'Refer a Friend', 'Group Bookings', 'List with us', 'Partner with us', 'Universities', 'Careers'].map(link => (
-                  <li key={link} className="text-sm font-medium text-gray-400 hover:text-primary transition-colors cursor-pointer flex items-center gap-2">
-                    {link}
-                    {(link === 'Group Bookings' || link === 'List with us' || link === 'Partner with us' || link === 'Universities') && <span className="text-[9px] font-black bg-pink-50 text-pink-500 px-1.5 py-0.5 rounded uppercase">New</span>}
-                    {link === 'Careers' && <span className="text-[9px] font-black bg-pink-50 text-pink-500 px-1.5 py-0.5 rounded uppercase">We are hiring!</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="md:col-span-2 flex flex-col gap-6">
-              <h3 className="font-black text-dark text-sm tracking-tight">Discover</h3>
-              <ul className="flex flex-col gap-3.5">
-                {['Blog', 'Podcast', 'Newsroom', 'Amber Plus', 'Media Mention', 'Ambassador', 'Scholarships', 'Exams'].map(link => (
-                  <li key={link} className="text-sm font-medium text-gray-400 hover:text-primary transition-colors cursor-pointer flex items-center gap-2">
-                    {link}
-                    {link === 'Scholarships' && <span className="text-[9px] font-black text-primary hover:underline uppercase">Apply Now</span>}
-                    {link === 'Exams' && <span className="text-[9px] font-black bg-pink-50 text-pink-500 px-1.5 py-0.5 rounded uppercase">New</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="md:col-span-2 flex flex-col gap-6">
-              <h3 className="font-black text-dark text-sm tracking-tight">Support</h3>
-              <ul className="flex flex-col gap-3.5">
-                {['Help Center', 'Contact', 'T&C', 'Privacy Policy', 'Sitemap'].map(link => (
-                  <li key={link} className="text-sm font-medium text-gray-400 hover:text-primary transition-colors cursor-pointer">{link}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Contact Us */}
-            <div className="md:col-span-2 flex flex-col gap-6">
-              <h3 className="font-black text-dark text-sm tracking-tight">Contact us</h3>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-100 text-gray-400 text-xs font-bold hover:border-primary transition-all cursor-pointer whitespace-nowrap">
-                  <Mail size={14} className="text-pink-400 flex-shrink-0" />
-                  contact@amberstudent.com
-                </div>
-                <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-100 text-gray-400 text-xs font-bold hover:border-primary transition-all cursor-pointer">
-                  <MessageCircle size={14} className="text-green-500 flex-shrink-0" />
-                  WhatsApp
-                </div>
-                <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-100 text-gray-400 text-xs font-bold hover:border-primary transition-all cursor-pointer whitespace-nowrap">
-                  <Phone size={14} className="text-pink-400 flex-shrink-0" />
-                  +91 8035735724
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4 mt-4">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Follow us on:</p>
-                <div className="flex gap-3">
-                  {[Instagram, Youtube, MessageSquare, Linkedin, TwitterIcon, Pinterest].map((Icon, i) => (
-                    <button key={i} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-primary hover:text-white transition-all">
-                      <Icon size={14} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
       {/* ══ APP DOWNLOAD MODAL ══ */}
       <AnimatePresence>
         {showAppModal && (
