@@ -8,7 +8,7 @@ import { FaCcVisa, FaCcMastercard, FaCcAmex, FaApple, FaGooglePlay } from 'react
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-100 pt-24 pb-12 font-outfit">
+    <footer className="bg-white border-t border-gray-100 pt-8 pb-12 font-outfit">
       <div className="max-w-[90%] mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-16 mb-20">
           {/* Brand + Trustpilot */}

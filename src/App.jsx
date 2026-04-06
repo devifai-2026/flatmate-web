@@ -27,6 +27,8 @@ const Wallet = lazy(() => import('./pages/Wallet'))
 const ManageListings = lazy(() => import('./pages/ManageListings'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Support = lazy(() => import('./pages/Support'))
+const Refer = lazy(() => import('./pages/Refer'))
+const Offers = lazy(() => import('./pages/Offers'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 function PageLoader() {
@@ -83,6 +85,8 @@ export default function App() {
         <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
         <Route path="/my-listings" element={<ProtectedRoute><ManageListings /></ProtectedRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+        <Route path="/refer" element={<ProtectedRoute><Refer /></ProtectedRoute>} />
+        <Route path="/offers" element={<ProtectedRoute><Offers /></ProtectedRoute>} />
         <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
