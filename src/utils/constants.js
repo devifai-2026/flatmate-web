@@ -58,16 +58,29 @@ export const GLOBAL_COUNTRIES = [
   { name: 'Singapore', flag: '🇸🇬' },
 ];
 
+export const USER_TYPES = [
+  { id: 'looking', label: 'Looking for a room', icon: '🔍' },
+  { id: 'have', label: 'Looking for a flatmate', icon: '🏠' },
+];
+
 export const LIFESTYLE_TAGS = [
-  { label: 'Night Owl', icon: '🦉' },
-  { label: 'Early Bird', icon: '☀️' },
-  { label: 'Fitness Freak', icon: '💪' },
-  { label: 'Foodie', icon: '🍳' },
-  { label: 'Gamer', icon: '🎮' },
-  { label: 'Clean Freak', icon: '✨' },
-  { label: 'Pet Lover', icon: '🐾' },
-  { label: 'Music Lover', icon: '🎵' },
-  { label: 'Traveler', icon: '✈️' },
+  { id: 'night-owl', label: 'Night Owl', emoji: '🦉' },
+  { id: 'early-bird', label: 'Early Bird', emoji: '☀️' },
+  { id: 'fitness-freak', label: 'Fitness Freak', emoji: '💪' },
+  { id: 'foodie', label: 'Foodie', emoji: '🍳' },
+  { id: 'gamer', label: 'Gamer', emoji: '🎮' },
+  { id: 'clean-freak', label: 'Clean Freak', emoji: '✨' },
+  { id: 'pet-lover', label: 'Pet Lover', emoji: '🐾' },
+  { id: 'music-lover', label: 'Music Lover', emoji: '🎵' },
+  { id: 'traveler', label: 'Traveler', emoji: '✈️' },
+  { id: 'studious', label: 'Studious', emoji: '📚' },
+  { id: 'party-lover', label: 'Party Lover', emoji: '🥳' },
+  { id: 'wanderer', label: 'Wanderer', emoji: '🎒' },
+  { id: 'vegan', label: 'Vegan', emoji: '🌿' },
+  { id: 'non-smoker', label: 'Non-Smoker', emoji: '🚭' },
+  { id: 'non-alcoholic', label: 'Non-Alcoholic', emoji: '🚫' },
+  { id: 'workaholic', label: 'Workaholic', emoji: '💼' },
+  { id: 'spiritual', label: 'Spiritual', emoji: '🧘' },
 ];
 
 // Fallback gradient for broken images
@@ -97,6 +110,8 @@ export const AVATAR_PLACEHOLDERS = [
   'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=200&q=80',
   'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&q=80',
 ];
+
+export const DEFAULT_AVATARS = AVATAR_PLACEHOLDERS;
 
 export function getRoomImage(id, images) {
   if (images?.length > 0) return images[0];
