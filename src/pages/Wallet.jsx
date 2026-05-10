@@ -217,7 +217,7 @@ export default function Wallet() {
                   {txn.type === 'recharge' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-dark line-clamp-1">{txn.description}</p>
+                  <p className="text-sm font-semibold text-dark line-clamp-1">{txn.description?.replace(/Admin bonus credit/i, 'Platform bonus')}</p>
                   <p className="text-[10px] text-muted">{formatDate(txn.createdAt)}</p>
                 </div>
                 <div className="text-right flex-shrink-0">

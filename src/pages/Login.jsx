@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Check, Shield, Home, Users, Heart, CheckCircle, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../components/ui/Button';
-import { sendOtp, verifyOtp, clearError, resetOtpState, updateUser } from '../redux/slices/authSlice';
+import { sendOtp, verifyOtp, clearError, resetOtpState, updateUser, clearSignupBonus } from '../redux/slices/authSlice';
 import { fetchProfile } from '../redux/slices/userSlice';
 import { LIFESTYLE_TAGS, USER_TYPES, DEFAULT_AVATARS, AUTH_BG } from '../utils/constants';
 import CityAutocomplete from '../components/ui/CityAutocomplete';
+import SignupBonusModal from '../components/ui/SignupBonusModal';
 import api from '../services/api';
 
 const slide = {
@@ -30,7 +31,7 @@ export default function Login() {
   const [dir, setDir] = useState(1);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, token, otpSent, isNewUser } = useSelector((s) => s.auth);
+  const { loading, error, token, otpSent, isNewUser, signupBonus } = useSelector((s) => s.auth);
 
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -408,6 +409,13 @@ export default function Login() {
           </AnimatePresence>
         </div>
       </div>
+
+      {signupBonus > 0 && (
+        <SignupBonusModal
+          amount={signupBonus}
+          onClose={() => dispatch(clearSignupBonus())}
+        />
+      )}
     </div>
   );
 }

@@ -70,19 +70,31 @@ export default function CityAutocomplete({ value, onChange, className, types = '
       />
       {open && suggestions.length > 0 && (
         <ul className="absolute z-50 left-0 right-0 mt-1 bg-white border border-dark/10 rounded-xl shadow-lg overflow-hidden">
-          {suggestions.map((s) => (
-            <li
-              key={s.id}
-              onClick={() => select(s)}
-              className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors"
-            >
-              <MapPin size={14} className="text-muted flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-dark truncate">{s.text}</p>
-                <p className="text-xs text-muted truncate">{s.place_name}</p>
-              </div>
-            </li>
-          ))}
+          {suggestions.map((s) => {
+            const isPostcode = s.place_type?.includes('postcode');
+            const ctxPin = s.context?.find((c) => c.id?.startsWith('postcode'))?.text;
+            const pin = isPostcode ? s.text : ctxPin;
+            return (
+              <li
+                key={s.id}
+                onClick={() => select(s)}
+                className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors"
+              >
+                <MapPin size={14} className="text-muted flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-dark truncate">{s.text}</p>
+                    {pin && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary flex-shrink-0">
+                        {pin}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted truncate">{s.place_name}</p>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -218,7 +218,7 @@ export default function PostListing() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-dark">Location</label>
-                <CityAutocomplete value={room.location} onChange={(city) => setRoom({ ...room, location: city })} types="address,poi,neighborhood,locality,place" placeholder="Search full address or area" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                <CityAutocomplete value={room.location} onChange={(city) => setRoom({ ...room, location: city })} types="address,poi,neighborhood,locality,place,postcode" placeholder="Search full address or area" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark text-sm outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Rent (₹/month)" type="number" placeholder="12000" value={room.rent} onChange={(e) => setRoom({ ...room, rent: e.target.value })} required />
@@ -317,7 +317,7 @@ export default function PostListing() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-dark">Full Address</label>
-                <CityAutocomplete value={pg.location} onChange={(loc) => setPg({ ...pg, location: loc })} types="address,poi,neighborhood,locality,place" placeholder="No. 123, 5th Cross, Koramangala" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                <CityAutocomplete value={pg.location} onChange={(loc) => setPg({ ...pg, location: loc })} types="address,poi,neighborhood,locality,place,postcode" placeholder="No. 123, 5th Cross, Koramangala" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark text-sm outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <Input label="City" placeholder="Bangalore" value={pg.city} onChange={(e) => setPg({ ...pg, city: e.target.value })} required />
               <div className="grid grid-cols-2 gap-3">
@@ -477,7 +477,7 @@ export default function PostListing() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-dark">Preferred Location</label>
-                <CityAutocomplete value={req.location} onChange={(city) => setReq({ ...req, location: city })} types="address,poi,neighborhood,locality,place" placeholder="Search area or city" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                <CityAutocomplete value={req.location} onChange={(city) => setReq({ ...req, location: city })} types="address,poi,neighborhood,locality,place,postcode" placeholder="Search area or city" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-dark text-sm outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Budget Min (₹)" type="number" placeholder="5000" value={req.budgetMin} onChange={(e) => setReq({ ...req, budgetMin: e.target.value })} required />
@@ -574,7 +574,7 @@ export default function PostListing() {
                 <textarea rows={2} value={req.notes} onChange={(e) => setReq({ ...req, notes: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20" placeholder="Any other preferences or info..." />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-dark">Photos (max 3)</label>
+                <label className="text-sm font-medium text-dark">Add a few photos of yourself (up to 3)</label>
                 <ImageUpload value={reqImages} onChange={setReqImages} multiple max={3} />
               </div>
               <Button type="submit" size="lg" className="w-full">{isEditing ? 'Update Profile' : 'Post Flatmate Profile'}</Button>

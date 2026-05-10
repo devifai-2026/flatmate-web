@@ -34,6 +34,7 @@ const authSlice = createSlice({
     loading: false,
     otpSent: false,
     isNewUser: false,
+    signupBonus: 0,
     error: null,
   },
   reducers: {
@@ -42,6 +43,7 @@ const authSlice = createSlice({
       state.token = null;
       state.otpSent = false;
       state.isNewUser = false;
+      state.signupBonus = 0;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     },
@@ -50,6 +52,9 @@ const authSlice = createSlice({
     },
     resetOtpState(state) {
       state.otpSent = false;
+    },
+    clearSignupBonus(state) {
+      state.signupBonus = 0;
     },
     updateUser(state, action) {
       state.user = { ...state.user, ...action.payload };
@@ -75,6 +80,7 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isNewUser = action.payload.isNewUser;
+        state.signupBonus = action.payload.signupBonus || 0;
         state.otpSent = false;
       })
       .addCase(verifyOtp.rejected, (state, action) => {
@@ -84,5 +90,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError, resetOtpState, updateUser } = authSlice.actions;
+export const { logout, clearError, resetOtpState, updateUser, clearSignupBonus } = authSlice.actions;
 export default authSlice.reducer;
