@@ -9,6 +9,10 @@ import {
 import Navbar from '../components/layout/Navbar';
 import Button from '../components/ui/Button';
 import { CITY_IMAGES, CITY_GRADIENTS, PLATFORM_STATS } from '../utils/constants';
+import heroLiving from '../assets/hero/living.jpg';
+import heroApartment from '../assets/hero/apartment.jpg';
+import heroMoving from '../assets/hero/moving.jpg';
+import heroHappy from '../assets/hero/happy.jpg';
 
 /* ── Animated counter ── */
 function Counter({ to, suffix = '' }) {
@@ -38,337 +42,6 @@ function Reveal({ children, className = '', delay = 0 }) {
   );
 }
 
-/* ══════════════════════════════════════════════
-   HERO — Apartment SVG with animated scenes
-   ══════════════════════════════════════════════ */
-
-const PR = '#FF1351';
-const AC = '#FF4D7A'; // primary-light tone
-
-function HeroApartment() {
-  const [scene, setScene] = useState(0);
-  useEffect(() => { const t = setInterval(() => setScene((v) => (v + 1) % 5), 5000); return () => clearInterval(t); }, []);
-
-  // Track which window the magnifying glass is near (for scene 0)
-  const [glassIdx, setGlassIdx] = useState(0);
-  useEffect(() => {
-    if (scene !== 0) return;
-    // Glass visits windows: 0 -> 4 -> 8 -> 3 (corners + center + left)
-    const order = [0, 2, 5, 3];
-    let i = 0;
-    const t = setInterval(() => { i = (i + 1) % order.length; setGlassIdx(order[i]); }, 1200);
-    setGlassIdx(order[0]);
-    return () => clearInterval(t);
-  }, [scene]);
-
-  const labels = ['Finding Rooms', 'Finding PGs', 'Finding Roommates', 'Creating Team', 'Matched!'];
-  const colors = [PR, AC, PR, AC, PR];
-
-  // Person component — reusable mini person SVG
-  const Person = ({ x, y, color, scale = 1, delay = 0 }) => (
-    <motion.g initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay }}>
-      <g transform={`translate(${x},${y}) scale(${scale})`}>
-        {/* Head */}
-        <circle cx="0" cy="-18" r="8" fill="#FFDAB9" />
-        {/* Hair */}
-        <ellipse cx="0" cy="-22" rx="8" ry="5" fill={color} opacity="0.6" />
-        {/* Body */}
-        <path d="M-8,0 Q-10,-12 0,-10 Q10,-12 8,0 Z" fill={color} />
-        {/* Arms */}
-        <path d="M-8,-6 L-14,2" stroke={color} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-        <path d="M8,-6 L14,2" stroke={color} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-        {/* Legs */}
-        <line x1="-3" y1="0" x2="-5" y2="14" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="3" y1="0" x2="5" y2="14" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      </g>
-    </motion.g>
-  );
-
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.15 }}>
-      <svg viewBox="0 0 460 440" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-        <defs>
-          <filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#1E1E2F" floodOpacity="0.08" /></filter>
-          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#EFF6FF" /><stop offset="100%" stopColor="#F8F9FD" /></linearGradient>
-          <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FFFFFF" /><stop offset="100%" stopColor="#F8F9FD" /></linearGradient>
-        </defs>
-
-        {/* ── Sky background ── */}
-        <rect x="0" y="0" width="460" height="440" rx="16" fill="url(#sky)" />
-
-        {/* ── Clouds ── */}
-        <motion.g animate={{ x: [0, 10, 0] }} transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}>
-          <ellipse cx="80" cy="50" rx="30" ry="12" fill="white" opacity="0.7" />
-          <ellipse cx="65" cy="48" rx="20" ry="10" fill="white" opacity="0.5" />
-        </motion.g>
-        <motion.g animate={{ x: [0, -8, 0] }} transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}>
-          <ellipse cx="380" cy="35" rx="25" ry="10" fill="white" opacity="0.6" />
-          <ellipse cx="395" cy="33" rx="18" ry="8" fill="white" opacity="0.4" />
-        </motion.g>
-
-        {/* ── Ground ── */}
-        <rect x="0" y="365" width="460" height="75" rx="0" fill="#E8F5E9" />
-        <rect x="0" y="365" width="460" height="8" rx="0" fill="#C8E6C9" opacity="0.5" />
-        {/* Path */}
-        <rect x="185" y="365" width="90" height="75" fill="#E0E0E0" opacity="0.4" />
-        <rect x="195" y="365" width="70" height="75" fill="#EEEEEE" opacity="0.3" />
-
-        {/* ── APARTMENT BUILDING ── */}
-        <g>
-          {/* Building shadow */}
-          <rect x="98" y="370" width="264" height="10" rx="5" fill="#1E1E2F" opacity="0.04" />
-
-          {/* Main wall */}
-          <rect x="100" y="95" width="260" height="275" rx="4" fill="url(#wall)" filter="url(#ds)" />
-          <rect x="100" y="95" width="260" height="275" rx="4" stroke="#D1D5DB" strokeWidth="0.5" fill="none" />
-
-          {/* Roof */}
-          <path d="M90 98 L230 38 L370 98 Z" fill="#FF8A80" opacity="0.15" />
-          <path d="M90 98 L230 38 L370 98" fill="none" stroke="#FFAB91" strokeWidth="1.5" />
-          {/* Roof tiles texture */}
-          <path d="M130 85 L230 48 L330 85" fill="none" stroke="#FFAB91" strokeWidth="0.5" opacity="0.4" />
-
-          {/* ── 3x2 Windows (6 total, avoids door overlap) ── */}
-          {[0,1].map(row => [0,1,2].map(col => {
-            const idx = row * 3 + col;
-            const wx = 124 + col * 78;
-            const wy = 115 + row * 90;
-
-            // Scene-based window states
-            const roomLit = scene === 0 && idx === glassIdx;
-            const pgLit = scene === 1;
-            const mateLit = scene >= 2;
-            const isLit = roomLit || pgLit || mateLit;
-            const warmHues = ['#FFF8E1','#E8F5E9','#E3F2FD','#FCE4EC','#FFF3E0','#F3E5F5'];
-
-            return (
-              <g key={idx}>
-                {/* Window outer frame */}
-                <rect x={wx} y={wy} width="48" height="52" rx="3" fill="#FAFAFA" stroke="#D1D5DB" strokeWidth="0.8" />
-                {/* Glass */}
-                <rect x={wx+2} y={wy+2} width="44" height="48" rx="2" fill={isLit ? warmHues[idx] : '#F0F4F8'} opacity={isLit ? 0.9 : 1}>
-                  {isLit && <animate attributeName="opacity" values="0.7;0.9;0.7" dur="3s" repeatCount="indefinite" />}
-                </rect>
-                {/* Pane cross */}
-                <line x1={wx+24} y1={wy+2} x2={wx+24} y2={wy+50} stroke="#D1D5DB" strokeWidth="0.6" />
-                <line x1={wx+2} y1={wy+26} x2={wx+46} y2={wy+26} stroke="#D1D5DB" strokeWidth="0.6" />
-
-                {/* Window sill */}
-                <rect x={wx-2} y={wy+52} width="52" height="4" rx="1" fill="#E0E0E0" />
-
-                {/* Curtains (subtle) */}
-                <path d={`M${wx+3} ${wy+3} Q${wx+12} ${wy+15} ${wx+3} ${wy+25}`} fill={PR} opacity="0.04" />
-                <path d={`M${wx+45} ${wy+3} Q${wx+36} ${wy+15} ${wx+45} ${wy+25}`} fill={PR} opacity="0.04" />
-
-                {/* Person silhouette inside (scenes 2+) */}
-                {scene >= 2 && [0,2,3,5].includes(idx) && (
-                  <motion.g initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: idx * 0.05 }}>
-                    <circle cx={wx+24} cy={wy+18} r="5" fill="#455A64" opacity="0.25" />
-                    <rect x={wx+19} y={wy+24} width="10" height="14" rx="3" fill="#455A64" opacity="0.2" />
-                  </motion.g>
-                )}
-              </g>
-            );
-          }))}
-
-          {/* ── Front door ── */}
-          <rect x="198" y="310" width="64" height="60" rx="4" fill="#5D4037" opacity="0.12" />
-          <rect x="202" y="314" width="26" height="52" rx="3" fill="#8D6E63" opacity="0.1" />
-          <rect x="232" y="314" width="26" height="52" rx="3" fill="#8D6E63" opacity="0.1" />
-          <circle cx="226" cy="345" r="3" fill="#BDBDBD" />
-          {/* Steps */}
-          <rect x="190" y="368" width="80" height="5" rx="2" fill="#E0E0E0" />
-          <rect x="185" y="372" width="90" height="4" rx="2" fill="#EEEEEE" />
-
-          {/* (PG sign removed — clean look) */}
-
-          {/* ── Scene 1: PG — SVG icons inside each window ── */}
-          {scene === 1 && (() => {
-            // Each window gets a unique SVG icon drawn with paths
-            const icons = [
-              // 0: Bed
-              (cx, cy) => <g><rect x={cx-9} y={cy-2} width="18" height="8" rx="2" fill="#8D6E63" opacity="0.5" /><rect x={cx-10} y={cy+5} width="20" height="3" rx="1.5" fill="#8D6E63" opacity="0.35" /><ellipse cx={cx-5} cy={cy-4} rx="4" ry="3" fill="#8D6E63" opacity="0.3" /></g>,
-              // 1: Plate + fork (meals)
-              (cx, cy) => <g><circle cx={cx} cy={cy} r="8" fill="none" stroke={AC} strokeWidth="1.5" opacity="0.5" /><circle cx={cx} cy={cy} r="4" fill={AC} opacity="0.15" /><line x1={cx-2} y1={cy-10} x2={cx-2} y2={cy-5} stroke={AC} strokeWidth="1.2" strokeLinecap="round" opacity="0.4" /><line x1={cx+2} y1={cy-10} x2={cx+2} y2={cy-5} stroke={AC} strokeWidth="1.2" strokeLinecap="round" opacity="0.4" /></g>,
-              // 2: WiFi signal
-              (cx, cy) => <g><circle cx={cx} cy={cy+4} r="2" fill={AC} opacity="0.5" /><path d={`M${cx-6} ${cy-2} Q${cx} ${cy-7} ${cx+6} ${cy-2}`} fill="none" stroke={AC} strokeWidth="1.5" strokeLinecap="round" opacity="0.4" /><path d={`M${cx-10} ${cy-6} Q${cx} ${cy-13} ${cx+10} ${cy-6}`} fill="none" stroke={AC} strokeWidth="1.5" strokeLinecap="round" opacity="0.3" /></g>,
-              // 3: Snowflake (AC)
-              (cx, cy) => <g><line x1={cx} y1={cy-8} x2={cx} y2={cy+8} stroke={PR} strokeWidth="1.5" strokeLinecap="round" opacity="0.4" /><line x1={cx-7} y1={cy-4} x2={cx+7} y2={cy+4} stroke={PR} strokeWidth="1.5" strokeLinecap="round" opacity="0.4" /><line x1={cx-7} y1={cy+4} x2={cx+7} y2={cy-4} stroke={PR} strokeWidth="1.5" strokeLinecap="round" opacity="0.4" /><circle cx={cx} cy={cy} r="2" fill={PR} opacity="0.3" /></g>,
-              // 4: Shower head (bath)
-              (cx, cy) => <g><rect x={cx-1} y={cy-10} width="2" height="10" rx="1" fill={AC} opacity="0.4" /><circle cx={cx} cy={cy-10} r="4" fill="none" stroke={AC} strokeWidth="1.5" opacity="0.4" /><line x1={cx-3} y1={cy+2} x2={cx-3} y2={cy+6} stroke={AC} strokeWidth="1" strokeLinecap="round" opacity="0.3" /><line x1={cx} y1={cy+2} x2={cx} y2={cy+7} stroke={AC} strokeWidth="1" strokeLinecap="round" opacity="0.3" /><line x1={cx+3} y1={cy+2} x2={cx+3} y2={cy+5} stroke={AC} strokeWidth="1" strokeLinecap="round" opacity="0.3" /></g>,
-              // 5: Shield (safety)
-              (cx, cy) => <g><path d={`M${cx} ${cy-10} L${cx+9} ${cy-5} L${cx+9} ${cy+2} C${cx+9} ${cy+8} ${cx+4} ${cy+12} ${cx} ${cy+13} C${cx-4} ${cy+12} ${cx-9} ${cy+8} ${cx-9} ${cy+2} L${cx-9} ${cy-5} Z`} fill={PR} opacity="0.15" /><path d={`M${cx} ${cy-10} L${cx+9} ${cy-5} L${cx+9} ${cy+2} C${cx+9} ${cy+8} ${cx+4} ${cy+12} ${cx} ${cy+13} C${cx-4} ${cy+12} ${cx-9} ${cy+8} ${cx-9} ${cy+2} L${cx-9} ${cy-5} Z`} fill="none" stroke={PR} strokeWidth="1" opacity="0.3" /><path d={`M${cx-3} ${cy} L${cx-1} ${cy+3} L${cx+4} ${cy-3}`} fill="none" stroke={PR} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" /></g>,
-            ];
-            const iconLabels = ['Bed', 'Meals', 'WiFi', 'AC', 'Bath', 'Safe'];
-            const labelColors = [AC, PR, AC, PR, AC, PR];
-
-            return (
-              <g>
-                {[0,1].map(row => [0,1,2].map(col => {
-                  const idx = row * 3 + col;
-                  const cx = 124 + col * 78 + 24;
-                  const cy = 115 + row * 90 + 22;
-                  return (
-                    <motion.g key={`pg-${idx}`}
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.5, delay: 0.3 + idx * 0.25 }}
-                    >
-                      {icons[idx](cx, cy)}
-                      <text x={cx} y={cy + 20} textAnchor="middle" fill={labelColors[idx]} fontSize="6" fontWeight="600" opacity="0.7">{iconLabels[idx]}</text>
-                    </motion.g>
-                  );
-                }))}
-                {/* Sharing badges removed */}
-              </g>
-            );
-          })()}
-        </g>
-
-        {/* ── Scene 0: Magnifying glass moves to each window ── */}
-        {scene === 0 && (() => {
-          // Window center positions (matches the 3x3 grid)
-          const winCenters = [0,1].flatMap(row => [0,1,2].map(col => ({
-            x: 124 + col * 78 + 24,
-            y: 115 + row * 90 + 26,
-          })));
-          const target = winCenters[glassIdx] || winCenters[0];
-          return (
-            <g>
-              <motion.g animate={{ x: target.x, y: target.y }} transition={{ duration: 0.9, ease: [0.25, 0.4, 0.25, 1] }}>
-                <circle r="22" fill="white" filter="url(#ds)" opacity="0.85" />
-                <circle r="12" fill="none" stroke={PR} strokeWidth="2.5" />
-                <line x1="9" y1="9" x2="16" y2="16" stroke={PR} strokeWidth="2.5" strokeLinecap="round" />
-                <motion.circle cx="-3" cy="-3" r="2" fill={PR} animate={{ opacity: [0,1,0] }} transition={{ duration: 0.8, repeat: Infinity }} />
-              </motion.g>
-              {/* Highlight ring on target window */}
-              <motion.rect
-                x={winCenters[glassIdx].x - 28} y={winCenters[glassIdx].y - 30}
-                width="56" height="58" rx="6"
-                fill="none" stroke={PR} strokeWidth="2" strokeDasharray="4"
-                animate={{ opacity: [0, 0.5, 0.5, 0] }}
-                transition={{ duration: 0.8 }}
-                key={glassIdx}
-              />
-            </g>
-          );
-        })()}
-
-        {/* ── Scene 2: Chat bubbles coming out of windows ── */}
-        {scene === 2 && (
-          <g>
-            {/* Bubble 1 — from top-left window (124,141) → left side */}
-            <motion.g initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.5 }}>
-              <rect x="125" y="96" width="80" height="22" rx="8" fill="white" filter="url(#ds)" />
-              <path d="M148 118 L145 125 L153 118" fill="white" />
-              <text x="165" y="111" textAnchor="middle" fill="#455A64" fontSize="6.5" fontWeight="500">Room available?</text>
-            </motion.g>
-            {/* Bubble 2 — from top-right window (280,141) → right side */}
-            <motion.g initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.2, duration: 0.5 }}>
-              <rect x="256" y="96" width="88" height="22" rx="8" fill={PR} filter="url(#ds)" />
-              <path d="M304 118 L307 125 L299 118" fill={PR} />
-              <text x="300" y="111" textAnchor="middle" fill="white" fontSize="6.5" fontWeight="500">Yes! Near metro 🚇</text>
-            </motion.g>
-            {/* Bubble 3 — from bottom-left window (124,231) → left side */}
-            <motion.g initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 2.2, duration: 0.5 }}>
-              <rect x="120" y="186" width="78" height="22" rx="8" fill="white" filter="url(#ds)" />
-              <path d="M148 208 L145 215 L153 208" fill="white" />
-              <text x="159" y="201" textAnchor="middle" fill="#455A64" fontSize="6.5" fontWeight="500">Budget ₹12k ok?</text>
-            </motion.g>
-            {/* Bubble 4 — from bottom-right window (280,231) → right side */}
-            <motion.g initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 3.2, duration: 0.5 }}>
-              <rect x="253" y="186" width="96" height="22" rx="8" fill={AC} filter="url(#ds)" />
-              <path d="M304 208 L307 215 L299 208" fill={AC} />
-              <text x="301" y="201" textAnchor="middle" fill="white" fontSize="6.5" fontWeight="500">Perfect, let's connect!</text>
-            </motion.g>
-          </g>
-        )}
-
-        {/* ── Scene 3: People walking toward building ── */}
-        {scene === 3 && (
-          <g>
-            <Person x={60} y={380} color={PR} delay={0.3} />
-            <Person x={120} y={385} color={AC} scale={0.9} delay={0.7} />
-            <Person x={340} y={385} color={AC} scale={0.9} delay={1.1} />
-            <Person x={400} y={380} color={PR} delay={1.5} />
-
-            {/* Walking arrows */}
-            <motion.path d="M78 387 L170 387" stroke={PR} strokeWidth="1" strokeDasharray="3" opacity="0.3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8, delay: 0.5 }} />
-            <motion.path d="M383 387 L290 387" stroke={AC} strokeWidth="1" strokeDasharray="3" opacity="0.3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8, delay: 1.3 }} />
-
-            {/* Team badge */}
-            <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 2.2, ease: 'backOut' }}>
-              <rect x="190" y="402" width="80" height="22" rx="11" fill={AC} filter="url(#ds)" />
-              <text x="230" y="417" textAnchor="middle" fill="white" fontSize="9" fontWeight="700">Team of 4!</text>
-            </motion.g>
-          </g>
-        )}
-
-        {/* ── Scene 4: Matched celebration ── */}
-        {scene === 4 && (
-          <g>
-            {/* Two people meeting at door */}
-            <motion.g initial={{ x: -30 }} animate={{ x: 0 }} transition={{ duration: 0.8 }}>
-              <Person x={190} y={380} color={PR} />
-            </motion.g>
-            <motion.g initial={{ x: 30 }} animate={{ x: 0 }} transition={{ duration: 0.8, delay: 0.3 }}>
-              <Person x={270} y={380} color={AC} />
-            </motion.g>
-
-            {/* Heart */}
-            <motion.g initial={{ scale: 0 }} animate={{ scale: [0,1.4,1] }} transition={{ delay: 1.0, duration: 0.6, ease: 'backOut' }}>
-              <path d="M222 365 C222 358,228 356,232 361 C236 356,242 358,242 365 C242 374,232 380,232 380 C232 380,222 374,222 365Z" fill={PR} />
-            </motion.g>
-
-            {/* Handshake line */}
-            <motion.line x1="202" y1="385" x2="258" y2="385" stroke={AC} strokeWidth="2" strokeDasharray="4" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.9, duration: 0.6 }} opacity="0.4" />
-
-            {/* Match badge */}
-            <motion.g initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.6 }}>
-              <rect x="185" y="410" width="90" height="24" rx="12" fill={PR} filter="url(#ds)" />
-              <text x="230" y="426" textAnchor="middle" fill="white" fontSize="10" fontWeight="700">92% Matched!</text>
-            </motion.g>
-
-            {/* Confetti */}
-            {[
-              {x:130,y:80},{x:330,y:90},{x:110,y:200},{x:350,y:190},
-              {x:160,y:60},{x:300,y:70},{x:140,y:280},{x:320,y:270},
-              {x:100,y:140},{x:360,y:150},{x:180,y:50},{x:280,y:55},
-            ].map((d, i) => (
-              <motion.rect key={i} x={d.x} y={d.y}
-                width={i % 3 === 0 ? 6 : 4} height={i % 3 === 0 ? 3 : 5} rx="1"
-                fill={[PR,AC,PR,AC,PR,AC,PR,AC,PR,AC,PR,AC][i]}
-                initial={{ opacity: 0, rotate: 0 }}
-                animate={{ opacity: [0,1,0], y: [d.y, d.y - 30], rotate: [0, 180 + i * 30] }}
-                transition={{ duration: 1.4, delay: 1.8 + i * 0.06 }}
-              />
-            ))}
-          </g>
-        )}
-
-        {/* ── Status badge (top) ── */}
-        <motion.g key={scene} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-          <rect x="150" y="5" width="160" height="26" rx="13" fill={colors[scene]} filter="url(#ds)" />
-          {scene < 4 && (
-            <motion.g animate={{ opacity: [0.3,1,0.3] }} transition={{ duration: 0.6, repeat: Infinity }}>
-              <circle cx="168" cy="18" r="2" fill="white" opacity="0.7" />
-              <circle cx="175" cy="18" r="2" fill="white" opacity="0.5" />
-              <circle cx="182" cy="18" r="2" fill="white" opacity="0.3" />
-            </motion.g>
-          )}
-          <text x={scene < 4 ? 245 : 230} y="22" textAnchor="middle" fill="white" fontSize="10" fontWeight="700">{labels[scene]}</text>
-        </motion.g>
-
-        {/* Progress dots removed */}
-      </svg>
-    </motion.div>
-  );
-}
-
-
-/* ══════════════════════════════════════════════
-   LANDING PAGE
-   ══════════════════════════════════════════════ */
 
 export default function Landing() {
   const [location, setLocation] = useState('');
@@ -380,55 +53,50 @@ export default function Landing() {
       <Navbar />
 
       {/* ══ HERO ══ */}
-      <section className="relative hero-mesh">
+      <section className="relative overflow-hidden hero-mesh">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/[0.04] rounded-full blur-[100px] -translate-y-1/3 translate-x-1/4 animate-pulse-soft" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/[0.03] rounded-full blur-[80px] translate-y-1/3 -translate-x-1/4" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
-            {/* Left — text */}
-            <div>
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/10 text-primary text-xs font-bold px-3.5 py-1.5 rounded-full mb-5 border border-primary/10">
-                <Sparkles size={13} className="text-primary" /> India's #1 Flatmate & Room Finder
-              </motion.div>
+        {/* Corner photo cards */}
+        <motion.img src={heroLiving} alt="" initial={{ opacity: 0, y: -15, rotate: -8 }} animate={{ opacity: 1, y: 0, rotate: -6 }} transition={{ duration: 0.5 }}
+          className="hidden lg:block absolute top-10 left-8 xl:left-20 w-36 h-36 object-cover rounded-2xl border-4 border-white shadow-xl" />
+        <motion.img src={heroApartment} alt="" initial={{ opacity: 0, y: -15, rotate: 8 }} animate={{ opacity: 1, y: 0, rotate: 6 }} transition={{ duration: 0.5, delay: 0.1 }}
+          className="hidden lg:block absolute top-16 right-8 xl:right-20 w-36 h-36 object-cover rounded-2xl border-4 border-white shadow-xl" />
+        <motion.img src={heroMoving} alt="" initial={{ opacity: 0, y: 15, rotate: 6 }} animate={{ opacity: 1, y: 0, rotate: 4 }} transition={{ duration: 0.5, delay: 0.2 }}
+          className="hidden lg:block absolute bottom-10 left-12 xl:left-28 w-36 h-36 object-cover rounded-2xl border-4 border-white shadow-xl" />
+        <motion.img src={heroHappy} alt="" initial={{ opacity: 0, y: 15, rotate: -6 }} animate={{ opacity: 1, y: 0, rotate: -4 }} transition={{ duration: 0.5, delay: 0.3 }}
+          className="hidden lg:block absolute bottom-14 right-12 xl:right-28 w-36 h-36 object-cover rounded-2xl border-4 border-white shadow-xl" />
 
-              <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}
-                className="text-4xl sm:text-5xl lg:text-[3.4rem] font-extrabold text-dark leading-[1.1] mb-5 tracking-tight">
-                Find Compatible <span className="text-gradient">Flatmates</span>,{' '}
-                <span className="text-gradient">Rooms</span> & <span className="text-gradient">PGs</span>
-              </motion.h1>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16 lg:py-24 relative z-10 text-center">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}
+            className="text-4xl sm:text-5xl font-extrabold text-dark leading-[1.15] mb-4 tracking-tight">
+            Find Compatible<br />
+            <span className="text-gradient">Flatmates, Rooms & PGs</span>
+          </motion.h1>
 
-              <motion.p initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
-                className="text-muted text-base leading-relaxed mb-6 max-w-lg">
-                Smart matching across <strong className="text-dark">50+ cities</strong>. Zero brokerage. Verified profiles, secure chat, and lifestyle-based compatibility scoring.
-              </motion.p>
+          <motion.p initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
+            className="text-muted text-base leading-relaxed mb-8 max-w-lg mx-auto">
+            Smart matching across <strong className="text-dark">50+ cities</strong>. Zero brokerage. Verified profiles, secure chat, and lifestyle-based compatibility scoring.
+          </motion.p>
 
-              <motion.form onSubmit={handleSearch} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}
-                className="flex flex-col sm:flex-row gap-2 max-w-lg mb-5">
-                <div className="flex-1 relative">
-                  <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary" />
-                  <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Enter city — Mumbai, Bangalore..."
-                    className="w-full pl-10 pr-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-white text-dark placeholder-muted/50 outline-none focus:border-primary/30 focus:shadow-lg focus:shadow-primary/5 transition-all text-sm font-medium" />
-                </div>
-                <Button type="submit" size="lg" className="rounded-2xl shadow-lg shadow-primary/20 px-6">
-                  <Search size={16} /> Search
-                </Button>
-              </motion.form>
-
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-                className="flex flex-wrap gap-4 text-xs text-muted">
-                <span className="flex items-center gap-1"><BadgeCheck size={14} className="text-primary" /> Verified Profiles</span>
-                <span className="flex items-center gap-1"><Lock size={14} className="text-primary" /> Secure Chat</span>
-                <span className="flex items-center gap-1"><Percent size={14} className="text-secondary" /> Zero Brokerage</span>
-              </motion.div>
+          <motion.form onSubmit={handleSearch} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}
+            className="flex flex-col sm:flex-row gap-2 max-w-lg mx-auto mb-7">
+            <div className="flex-1 relative">
+              <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
+              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Enter City Name"
+                className="w-full pl-10 pr-4 py-3.5 rounded-full border-2 border-gray-100 bg-white text-dark placeholder-muted/50 outline-none focus:border-primary/30 focus:shadow-lg focus:shadow-primary/5 transition-all text-sm font-medium" />
             </div>
+            <Button type="submit" size="lg" className="!rounded-full shadow-lg shadow-primary/20 px-6">
+              <Search size={16} /> Search
+            </Button>
+          </motion.form>
 
-            {/* Right — animated apartment SVG */}
-            <div className="hidden lg:block">
-              <HeroApartment />
-            </div>
-          </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+            className="flex flex-wrap justify-center gap-6 text-xs text-muted font-medium">
+            <span className="flex items-center gap-2"><span className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center"><Shield size={14} className="text-primary" /></span> Verified Profile</span>
+            <span className="flex items-center gap-2"><span className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center"><Lock size={14} className="text-primary" /></span> Secure Chat</span>
+            <span className="flex items-center gap-2"><span className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center"><Percent size={14} className="text-primary" /></span> Zero Brokerage</span>
+          </motion.div>
         </div>
       </section>
 
